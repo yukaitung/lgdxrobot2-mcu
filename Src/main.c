@@ -69,6 +69,21 @@ static void MX_TIM5_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	static int tim2_count = 0; 
+	if(htim->Instance == htim2.Instance)
+	{
+		// About 10ms
+		tim2_count++;
+		if(tim2_count >= 700)
+		{
+			tim2_count = 0;
+			MOTOR_PID();
+		}
+	}
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -108,19 +123,18 @@ int main(void)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 	MOTOR_Init(&htim2, &htim1, &htim3, &htim4, &htim5);
+	//HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	uint8_t msg[50] = {'\0'};
+	uint8_t msg[150] = {'\0'};
   while (1)
   {
-		
-		uint32_t c1 = MOTOR_Get_Encoder(0);
-		uint32_t c2 = MOTOR_Get_Encoder(1);
-		uint32_t c3 = MOTOR_Get_Encoder(2);
-		uint32_t c4 = MOTOR_Get_Encoder(3);
-		sprintf((char*) msg, "Encoder: %d, %d, %d, %d \r\n", c1, c2, c3, c4);
+		float *motor_velocity = MOTOR_Get_Velocity();
+		float *motor_target_velocity = MOTOR_Get_Target_Velocity();
+		uint16_t *pwm = MOTOR_Get_Pwm();
+		sprintf((char*) msg, "TV: %f, %f, %f, %f MV: %f, %f, %f, %f PWM: %d, %d, %d, %d \r\n", motor_target_velocity[0], motor_target_velocity[1], motor_target_velocity[2], motor_target_velocity[3], motor_velocity[0], motor_velocity[1], motor_velocity[2], motor_velocity[3], pwm[0], pwm[1], pwm[2], pwm[3]);
 		CDC_Transmit_FS(msg, strlen((char*) msg));
     /* USER CODE END WHILE */
 
