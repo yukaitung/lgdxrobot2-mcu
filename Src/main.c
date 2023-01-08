@@ -33,7 +33,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define TIMER2_COUNT_MAX 700 // 1 / (70Khz / 700) = 10ms
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -76,7 +76,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	{
 		// About 10ms
 		tim2_count++;
-		if(tim2_count >= 700)
+		if(tim2_count >= TIMER2_COUNT_MAX)
 		{
 			tim2_count = 0;
 			MOTOR_PID();
@@ -123,7 +123,7 @@ int main(void)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 	MOTOR_Init(&htim2, &htim1, &htim3, &htim4, &htim5);
-	//HAL_TIM_Base_Start_IT(&htim2);
+	HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -133,8 +133,7 @@ int main(void)
   {
 		float *motor_velocity = MOTOR_Get_Velocity();
 		float *motor_target_velocity = MOTOR_Get_Target_Velocity();
-		uint16_t *pwm = MOTOR_Get_Pwm();
-		sprintf((char*) msg, "TV: %f, %f, %f, %f MV: %f, %f, %f, %f PWM: %d, %d, %d, %d \r\n", motor_target_velocity[0], motor_target_velocity[1], motor_target_velocity[2], motor_target_velocity[3], motor_velocity[0], motor_velocity[1], motor_velocity[2], motor_velocity[3], pwm[0], pwm[1], pwm[2], pwm[3]);
+		sprintf((char*) msg, "TV: %f, %f, %f, %f MV: %f, %f, %f, %f\r\n", motor_target_velocity[0], motor_target_velocity[1], motor_target_velocity[2], motor_target_velocity[3], motor_velocity[0], motor_velocity[1], motor_velocity[2], motor_velocity[3]);
 		CDC_Transmit_FS(msg, strlen((char*) msg));
     /* USER CODE END WHILE */
 
@@ -251,11 +250,11 @@ static void MX_TIM1_Init(void)
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC1Filter = 0;
+  sConfig.IC1Filter = 10;
   sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC2Filter = 0;
+  sConfig.IC2Filter = 10;
   if (HAL_TIM_Encoder_Init(&htim1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -371,11 +370,11 @@ static void MX_TIM3_Init(void)
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC1Filter = 0;
+  sConfig.IC1Filter = 10;
   sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC2Filter = 0;
+  sConfig.IC2Filter = 10;
   if (HAL_TIM_Encoder_Init(&htim3, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -420,11 +419,11 @@ static void MX_TIM4_Init(void)
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC1Filter = 0;
+  sConfig.IC1Filter = 10;
   sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC2Filter = 0;
+  sConfig.IC2Filter = 10;
   if (HAL_TIM_Encoder_Init(&htim4, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -469,11 +468,11 @@ static void MX_TIM5_Init(void)
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC1Filter = 0;
+  sConfig.IC1Filter = 10;
   sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC2Filter = 0;
+  sConfig.IC2Filter = 10;
   if (HAL_TIM_Encoder_Init(&htim5, &sConfig) != HAL_OK)
   {
     Error_Handler();

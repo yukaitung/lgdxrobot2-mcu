@@ -1,5 +1,8 @@
+#include <math.h>
+#include <stdlib.h>
 #include "motor.h"
 #include "main.h"
+
 // Private Define
 #define ENCODER_LIMIT 65536
 
@@ -17,8 +20,8 @@ uint16_t encoder_last_value[WHEEL_COUNT] = {0, 0, 0, 0};
 float motor_kp[WHEEL_COUNT] = {0, 0, 0, 0};
 float motor_ki[WHEEL_COUNT] = {0, 0, 0, 0};
 float motor_kd[WHEEL_COUNT] = {0, 0, 0, 0};
-float accumulate_error[WHEEL_COUNT] = {0, 0, 0, 0};
-float last_error[WHEEL_COUNT] = {0, 0, 0, 0};
+float pid_accumulate_error[WHEEL_COUNT] = {0, 0, 0, 0};
+float pid_last_error[WHEEL_COUNT] = {0, 0, 0, 0};
 
 // Private Function
 int safe_unsigned_subtract(int a, int b, int limit)
@@ -37,7 +40,7 @@ void MOTOR_Set_Pwm(int motor, int CCR)
 {
 	if(CCR > MAX_PWM_CCR)
 		CCR = MAX_PWM_CCR;
-	if(CCR < 0)
+	else if(CCR < 0)
 		CCR = 0;
 	switch(motor)
 	{
@@ -119,7 +122,10 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *m1_htim, TIM_Han
 	motor_htim[1] = m2_htim;
 	motor_htim[2] = m3_htim;
 	motor_htim[3] = m4_htim;
-	HAL_TIM_PWM_Start(m_pwm_htim, TIM_CHANNEL_ALL);
+	HAL_TIM_PWM_Start(m_pwm_htim, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(m_pwm_htim, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Start(m_pwm_htim, TIM_CHANNEL_3);
+	HAL_TIM_PWM_Start(m_pwm_htim, TIM_CHANNEL_4);
 	for(int i = 0; i < WHEEL_COUNT; i++)
 	{
 		HAL_TIM_Encoder_Start(motor_htim[i], TIM_CHANNEL_ALL);
@@ -152,50 +158,44 @@ void MOTOR_PID()
 		
 		if(i % 2 == 0)
 		{
-			// 0, 2
-				motor_velocity[i] = safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], ENCODER_LIMIT) * ENCODER_MIN_ANGULAR;
+			// Motor 0, 2
+			motor_velocity[i] = (safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], ENCODER_LIMIT) * ENCODER_MIN_ANGULAR) * TIME_FACTOR;
 		}
 		else
 		{
-			// 1, 3
-				motor_velocity[i] = -1 * safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], ENCODER_LIMIT) * ENCODER_MIN_ANGULAR;
+			// Motor 1, 3
+			motor_velocity[i] = (-1 * safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], ENCODER_LIMIT) * ENCODER_MIN_ANGULAR) * TIME_FACTOR;
 		}
 		
 		// Calculate error
 		float error = motor_target_velocity[i] - motor_velocity[i];
-		accumulate_error[i] += error;
-		if(accumulate_error[i] >= MOTOR_MAX_SPEED)
-			accumulate_error[i] = MOTOR_MAX_SPEED;
-		else if(accumulate_error[i] <= -MOTOR_MAX_SPEED)
-			accumulate_error[i] = -MOTOR_MAX_SPEED;
-		float error_rate = error - last_error[i];
+		pid_accumulate_error[i] += error;
+		if(pid_accumulate_error[i] >= MOTOR_MAX_SPEED)
+			pid_accumulate_error[i] = MOTOR_MAX_SPEED;
+		else if(pid_accumulate_error[i] <= -MOTOR_MAX_SPEED)
+			pid_accumulate_error[i] = -MOTOR_MAX_SPEED;
+		float error_rate = error - pid_last_error[i];
 		
-		int pid = round((motor_kp[i] * error + motor_ki[i] * accumulate_error[i] + motor_kd[i] * error_rate) / MOTOR_MIN_STEP);
-		//motor_pwm[i] += abs(pid);
-		//MOTOR_Set_Pwm(i, motor_pwm[i]);
+		// Apply PID
+		int pid = roundf((motor_kp[i] * error + motor_ki[i] * pid_accumulate_error[i] + motor_kd[i] * error_rate) / MOTOR_MIN_STEP);
+		motor_pwm[i] += pid;
+		MOTOR_Set_Pwm(i, motor_pwm[i]);
 		
-		last_error[i] = error;
+		pid_last_error[i] = error;
 		encoder_last_value[i] = encoder_value[i];
 	}
 }
 
 void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w)
 {
-	motor_target_velocity[0] = 1 / (WHEEL_RADIUS * GEAR_RATIO) * (velocity_x - velocity_y - (CHASSIS_LX + CHASSIS_LY) * velocity_w);
-	motor_target_velocity[1] = 1 / (WHEEL_RADIUS * GEAR_RATIO) * (velocity_x + velocity_y + (CHASSIS_LX + CHASSIS_LY) * velocity_w);
-	motor_target_velocity[2] = 1 / (WHEEL_RADIUS * GEAR_RATIO) * (velocity_x + velocity_y - (CHASSIS_LX + CHASSIS_LY) * velocity_w);
-	motor_target_velocity[3] = 1 / (WHEEL_RADIUS * GEAR_RATIO) * (velocity_x - velocity_y + (CHASSIS_LX + CHASSIS_LY) * velocity_w);
+	motor_target_velocity[0] = (1 / WHEEL_RADIUS) * (velocity_x - velocity_y - (CHASSIS_LX + CHASSIS_LY) * velocity_w);
+	motor_target_velocity[1] = (1 / WHEEL_RADIUS) * (velocity_x + velocity_y + (CHASSIS_LX + CHASSIS_LY) * velocity_w);
+	motor_target_velocity[2] = (1 / WHEEL_RADIUS) * (velocity_x + velocity_y - (CHASSIS_LX + CHASSIS_LY) * velocity_w);
+	motor_target_velocity[3] = (1 / WHEEL_RADIUS) * (velocity_x - velocity_y + (CHASSIS_LX + CHASSIS_LY) * velocity_w);
 	for(int i = 0; i < WHEEL_COUNT; i++)
 	{
-		if(motor_target_velocity[i] >= 0)
-		{
-			MOTOR_Set_Direction(i, true);
-		}
-		else
-		{
-			MOTOR_Set_Direction(i, false);
-		}
-		motor_pwm[i] = round(motor_target_velocity[i] / MOTOR_MIN_STEP);
+		motor_target_velocity[i] >= 0 ? MOTOR_Set_Direction(i, true) : MOTOR_Set_Direction(i, false);
+		motor_pwm[i] = roundf(motor_target_velocity[i] / MOTOR_MIN_STEP);
 		MOTOR_Set_Pwm(i, motor_pwm[i]);
 	}
 }
@@ -208,9 +208,4 @@ float *MOTOR_Get_Velocity()
 float *MOTOR_Get_Target_Velocity()
 {
 	return motor_target_velocity;
-}
-
-uint16_t *MOTOR_Get_Pwm()
-{
-	return motor_pwm;
 }

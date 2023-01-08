@@ -265,9 +265,15 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 	switch(Buf[0])
 	{
 		case 'a':
-			MOTOR_Set_Ik(99, 0, 0);
+			MOTOR_Set_Ik(0.42, 0, 0);
 			break;
 		case 'b':
+			MOTOR_Set_Ik(0.2, 0, 0);
+			break;
+		case 'c':
+			MOTOR_Set_Ik(0.1, 0, 0);
+			break;
+		case 'z':
 			MOTOR_Set_Ik(0, 0, 0);
 			break;
 	}
