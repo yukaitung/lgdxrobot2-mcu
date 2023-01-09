@@ -273,6 +273,24 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 		case 'c':
 			MOTOR_Set_Ik(0.1, 0, 0);
 			break;
+		case 'd':
+			MOTOR_Set_Ik(0, 0.42, 0);
+			break;
+		case 'e':
+			MOTOR_Set_Ik(0, 0.2, 0);
+			break;
+		case 'f':
+			MOTOR_Set_Ik(0, 0.1, 0);
+			break;
+		case 'g':
+			MOTOR_Set_Ik(0, 0, 0.42);
+			break;
+		case 'h':
+			MOTOR_Set_Ik(0, 0, 0.2);
+			break;
+		case 'i':
+			MOTOR_Set_Ik(0, 0, 0.1);
+			break;
 		case 'z':
 			MOTOR_Set_Ik(0, 0, 0);
 			break;

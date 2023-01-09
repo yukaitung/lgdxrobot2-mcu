@@ -26,5 +26,6 @@ void MOTOR_PID();
 void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w);
 float *MOTOR_Get_Velocity();
 float *MOTOR_Get_Target_Velocity();
+int *MOTOR_Pwm();
 
 #endif

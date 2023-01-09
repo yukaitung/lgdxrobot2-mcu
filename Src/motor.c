@@ -12,7 +12,7 @@ TIM_HandleTypeDef *motor_htim[WHEEL_COUNT];
 // Motor
 float motor_velocity[WHEEL_COUNT] = {0, 0, 0, 0};
 float motor_target_velocity[WHEEL_COUNT] = {0, 0, 0, 0};
-uint16_t motor_pwm[WHEEL_COUNT] = {0, 0, 0, 0};
+int motor_pwm[WHEEL_COUNT] = {0, 0, 0, 0};
 // Encoder
 uint16_t encoder_value[WHEEL_COUNT] = {0, 0, 0, 0};
 uint16_t encoder_last_value[WHEEL_COUNT] = {0, 0, 0, 0};
@@ -38,10 +38,17 @@ int safe_unsigned_subtract(int a, int b, int limit)
 
 void MOTOR_Set_Pwm(int motor, int CCR)
 {
+	motor_pwm[motor] = CCR;
 	if(CCR > MAX_PWM_CCR)
+	{
 		CCR = MAX_PWM_CCR;
+		motor_pwm[motor] = MAX_PWM_CCR;
+	}
 	else if(CCR < 0)
+	{
 		CCR = 0;
+		motor_pwm[motor] = 0;
+	}
 	switch(motor)
 	{
 		case 0:
@@ -131,7 +138,6 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *m1_htim, TIM_Han
 		HAL_TIM_Encoder_Start(motor_htim[i], TIM_CHANNEL_ALL);
 	}
 	MOTOR_Set_Power(true);
-	HAL_GPIO_WritePin(D_STBY_GPIO_Port, D_STBY_Pin, GPIO_PIN_SET);
 }
 
 void MOTOR_Set_Power(bool enable)
@@ -141,12 +147,14 @@ void MOTOR_Set_Power(bool enable)
 		HAL_GPIO_WritePin(BT2_SW_GPIO_Port, BT2_SW_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(L_GREEN_GPIO_Port, L_GREEN_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(L_RED_GPIO_Port, L_RED_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(D_STBY_GPIO_Port, D_STBY_Pin, GPIO_PIN_SET);
 	}
 	else
 	{
 		HAL_GPIO_WritePin(BT2_SW_GPIO_Port, BT2_SW_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(L_GREEN_GPIO_Port, L_GREEN_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(L_RED_GPIO_Port, L_RED_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(D_STBY_GPIO_Port, D_STBY_Pin, GPIO_PIN_RESET);
 	}	
 }
 
@@ -178,8 +186,7 @@ void MOTOR_PID()
 		
 		// Apply PID
 		int pid = roundf((motor_kp[i] * error + motor_ki[i] * pid_accumulate_error[i] + motor_kd[i] * error_rate) / MOTOR_MIN_STEP);
-		motor_pwm[i] += pid;
-		MOTOR_Set_Pwm(i, motor_pwm[i]);
+		MOTOR_Set_Pwm(i, (motor_pwm[i] + pid));
 		
 		pid_last_error[i] = error;
 		encoder_last_value[i] = encoder_value[i];
@@ -195,8 +202,7 @@ void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w)
 	for(int i = 0; i < WHEEL_COUNT; i++)
 	{
 		motor_target_velocity[i] >= 0 ? MOTOR_Set_Direction(i, true) : MOTOR_Set_Direction(i, false);
-		motor_pwm[i] = roundf(motor_target_velocity[i] / MOTOR_MIN_STEP);
-		MOTOR_Set_Pwm(i, motor_pwm[i]);
+		MOTOR_Set_Pwm(i, abs((int) roundf(motor_target_velocity[i] / MOTOR_MIN_STEP)));
 	}
 }
 
@@ -208,4 +214,9 @@ float *MOTOR_Get_Velocity()
 float *MOTOR_Get_Target_Velocity()
 {
 	return motor_target_velocity;
+}
+
+int *MOTOR_Pwm()
+{
+	return motor_pwm;
 }

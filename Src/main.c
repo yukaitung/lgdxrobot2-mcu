@@ -133,7 +133,8 @@ int main(void)
   {
 		float *motor_velocity = MOTOR_Get_Velocity();
 		float *motor_target_velocity = MOTOR_Get_Target_Velocity();
-		sprintf((char*) msg, "TV: %f, %f, %f, %f MV: %f, %f, %f, %f\r\n", motor_target_velocity[0], motor_target_velocity[1], motor_target_velocity[2], motor_target_velocity[3], motor_velocity[0], motor_velocity[1], motor_velocity[2], motor_velocity[3]);
+		int *p = MOTOR_Pwm();
+		sprintf((char*) msg, "TV: %f, %f, %f, %f MV: %f, %f, %f, %f, PWM: %d %d %d %d\r\n", motor_target_velocity[0], motor_target_velocity[1], motor_target_velocity[2], motor_target_velocity[3], motor_velocity[0], motor_velocity[1], motor_velocity[2], motor_velocity[3], p[0], p[1], p[2], p[3]);
 		CDC_Transmit_FS(msg, strlen((char*) msg));
     /* USER CODE END WHILE */
 
