@@ -32,7 +32,8 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-char command_buffer[64];
+uint32_t motor = 0, constant = 0;
+uint32_t vx = 0, vy = 0, vw = 0;
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -146,6 +147,11 @@ USBD_CDC_ItfTypeDef USBD_Interface_fops_FS =
 };
 
 /* Private functions ---------------------------------------------------------*/
+ float Uint32_To_Float(uint32_t n)
+{
+   return (float)(*(float*)&n);
+}
+
 /**
   * @brief  Initializes the CDC media low layer over the FS USB IP
   * @retval USBD_OK if all operations are OK else USBD_FAIL
@@ -264,35 +270,47 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   /* USER CODE BEGIN 6 */
 	switch(Buf[0])
 	{
-		case 'a':
-			MOTOR_Set_Ik(0.42, 0, 0);
+		case 'M':
+			/*
+			 * Motor Inverse Kinematics, expect 3 float variables, the length is 13 bytes
+			 */
+			if (*Len != 13)
+				break;
+			
+			vx = Buf[1] << 24 | Buf[2] << 16 | Buf[3] << 8 | Buf[4];
+			vy = Buf[5] << 24 | Buf[6] << 16 | Buf[7] << 8 | Buf[8];
+			vw = Buf[9] << 24 | Buf[10] << 16 | Buf[11] << 8 | Buf[12];
+			MOTOR_Set_Ik(Uint32_To_Float(vx), Uint32_To_Float(vy), Uint32_To_Float(vw));
 			break;
-		case 'b':
-			MOTOR_Set_Ik(0.2, 0, 0);
+		case 'P':
+			/*
+			 * Motor P, expect 2 int variables, the length is 9 bytes
+			 */
+			if (*Len != 9)
+				break;
+			motor = Buf[1] << 24 | Buf[2] << 16 | Buf[3] << 8 | Buf[4];
+			constant = Buf[5] << 24 | Buf[6] << 16 | Buf[7] << 8 | Buf[8];
+			MOTOR_Set_P(motor, constant);
 			break;
-		case 'c':
-			MOTOR_Set_Ik(0.1, 0, 0);
+		case 'I':
+			/*
+			 * Motor I, expect 2 int variables, the length is 9 bytes
+			 */
+			if (*Len != 9)
+				break;
+			motor = Buf[1] << 24 | Buf[2] << 16 | Buf[3] << 8 | Buf[4];
+			constant = Buf[5] << 24 | Buf[6] << 16 | Buf[7] << 8 | Buf[8];
+			MOTOR_Set_I(motor, constant);
 			break;
-		case 'd':
-			MOTOR_Set_Ik(0, 0.42, 0);
-			break;
-		case 'e':
-			MOTOR_Set_Ik(0, 0.2, 0);
-			break;
-		case 'f':
-			MOTOR_Set_Ik(0, 0.1, 0);
-			break;
-		case 'g':
-			MOTOR_Set_Ik(0, 0, 0.42);
-			break;
-		case 'h':
-			MOTOR_Set_Ik(0, 0, 0.2);
-			break;
-		case 'i':
-			MOTOR_Set_Ik(0, 0, 0.1);
-			break;
-		case 'z':
-			MOTOR_Set_Ik(0, 0, 0);
+		case 'D':
+			/*
+			 * Motor D, expect 2 int variables, the length is 9 bytes
+			 */
+			if (*Len != 9)
+				break;
+			motor = Buf[1] << 24 | Buf[2] << 16 | Buf[3] << 8 | Buf[4];
+			constant = Buf[5] << 24 | Buf[6] << 16 | Buf[7] << 8 | Buf[8];
+			MOTOR_Set_D(motor, constant);
 			break;
 	}
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);

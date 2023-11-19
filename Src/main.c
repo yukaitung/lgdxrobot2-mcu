@@ -131,10 +131,7 @@ int main(void)
 	uint8_t msg[150] = {'\0'};
   while (1)
   {
-		float *motor_velocity = MOTOR_Get_Velocity();
-		float *motor_target_velocity = MOTOR_Get_Target_Velocity();
-		int *p = MOTOR_Pwm();
-		sprintf((char*) msg, "TV: %f, %f, %f, %f MV: %f, %f, %f, %f, PWM: %d %d %d %d\r\n", motor_target_velocity[0], motor_target_velocity[1], motor_target_velocity[2], motor_target_velocity[3], motor_velocity[0], motor_velocity[1], motor_velocity[2], motor_velocity[3], p[0], p[1], p[2], p[3]);
+		sprintf((char*) msg, "MV: %f, %f, %f, %f TV: %f, %f, %f, %f\r\n", MOTOR_Get_Velocity(0), MOTOR_Get_Velocity(1), MOTOR_Get_Velocity(2), MOTOR_Get_Velocity(3), MOTOR_Get_Target_Velocity(0), MOTOR_Get_Target_Velocity(1), MOTOR_Get_Target_Velocity(2), MOTOR_Get_Target_Velocity(3));
 		CDC_Transmit_FS(msg, strlen((char*) msg));
     /* USER CODE END WHILE */
 
