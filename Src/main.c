@@ -111,6 +111,14 @@ void Broadcast_Status()
 			msg[index++] = temp & 255;
 		}
 	}
+	for(int i = 0; i < WHEEL_COUNT; i++)
+	{
+		temp = MOTOR_Get_PWM(i);
+		msg[index++] = (temp & 4278190080) >> 24;
+		msg[index++] = (temp & 16711680) >> 16;
+		msg[index++] = (temp & 65280) >> 8;
+		msg[index++] = temp & 255;
+	}
 	msg[index++] = '\0';
 	msg[1] = index - 1;
 	CDC_Transmit_FS(msg, index);

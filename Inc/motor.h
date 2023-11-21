@@ -5,17 +5,16 @@
 #include <stdbool.h>
 
 // Constants
-#define MAX_PWM_CCR 1028
+#define MAX_PWM_CCR 1027
 // Constants - Chassis Configuration
 #define CHASSIS_LX 0.237
 #define CHASSIS_LY 0.287
 #define WHEEL_RADIUS 0.0375
 #define WHEEL_COUNT 4
 #define MOTOR_GEAR_RATIO 90
-#define MOTOR_MAX_SPEED 11.205013785 // 107 RPM to rad/s
 // Constants - Pre-Calculation
 #define ENCODER_MIN_ANGULAR 0.00158666296 // 2pi / (3960)
-#define MOTOR_MIN_STEP 0.0108998189 // MOTOR_MAX_SPEED / MAX_PWM_CCR
+
 // Constants - PID Configuration
 #define PID_RESPONSE_TIME_MS 10
 #define TIME_FACTOR 100 // 1 second / PID_RESPONSE_TIME_MS
@@ -24,9 +23,11 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *m1_htim, TIM_Han
 void MOTOR_Set_Power(bool enable);
 void MOTOR_PID();
 void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w);
+void MOTOR_Set_Single_Velocity(int motor, float velocity);
 void MOTOR_Set_PID(int motor, int kp, int ki, int kd);
 float MOTOR_Get_Velocity(int motor);
 float MOTOR_Get_Target_Velocity(int motor);
 int MOTOR_Get_PID(int pid, int motor);
+int MOTOR_Get_PWM(int motor);
 
 #endif

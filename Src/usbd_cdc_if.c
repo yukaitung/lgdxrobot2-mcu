@@ -285,7 +285,17 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 			vw = Combine_Byte((uint8_t) Buf[9], (uint8_t) Buf[10], (uint8_t) Buf[11], (uint8_t) Buf[12]);
 			MOTOR_Set_Ik(Uint32_To_Float(vx), Uint32_To_Float(vy), Uint32_To_Float(vw));
 			break;
-		
+		case 'V':
+			/*
+			 * Single Motor Velocity, expect 2 int variables, the length is 9 bytes
+			 */
+			if (*Len != 9)
+				break;
+			motor = Combine_Byte((uint8_t) Buf[1], (uint8_t) Buf[2], (uint8_t) Buf[3], (uint8_t) Buf[4]);
+			if(motor < 0 || motor > 4)
+				break;
+			vx = Combine_Byte((uint8_t) Buf[5], (uint8_t) Buf[6], (uint8_t) Buf[7], (uint8_t) Buf[8]);
+			MOTOR_Set_Single_Velocity(motor, Uint32_To_Float(vx));
 		case 'P':
 			/*
 			 * Motor PID, expect 4 int variables, the length is 17 bytes
@@ -293,6 +303,8 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 			if (*Len != 17)
 				break;
 			motor = Combine_Byte((uint8_t) Buf[1], (uint8_t) Buf[2], (uint8_t) Buf[3], (uint8_t) Buf[4]);
+			if(motor < 0 || motor > 4)
+				break;
 			kp = Combine_Byte((uint8_t) Buf[5], (uint8_t) Buf[6], (uint8_t) Buf[7], (uint8_t) Buf[8]);
 			ki = Combine_Byte((uint8_t) Buf[9], (uint8_t) Buf[10], (uint8_t) Buf[11], (uint8_t) Buf[12]);
 			kd = Combine_Byte((uint8_t) Buf[13], (uint8_t) Buf[14], (uint8_t) Buf[15], (uint8_t) Buf[16]);
