@@ -24,11 +24,9 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *m1_htim, TIM_Han
 void MOTOR_Set_Power(bool enable);
 void MOTOR_PID();
 void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w);
-void MOTOR_Set_P(int motor, int constant);
-void MOTOR_Set_I(int motor, int constant);
-void MOTOR_Set_D(int motor, int constant);
+void MOTOR_Set_PID(int motor, int kp, int ki, int kd);
 float MOTOR_Get_Velocity(int motor);
 float MOTOR_Get_Target_Velocity(int motor);
-int *MOTOR_Pwm();
+int MOTOR_Get_PID(int pid, int motor);
 
 #endif

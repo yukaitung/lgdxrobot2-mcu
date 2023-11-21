@@ -32,7 +32,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-uint32_t motor = 0, constant = 0;
+uint32_t motor = 0, kp = 0, ki = 0, kd = 0;
 uint32_t vx = 0, vy = 0, vw = 0;
 /* USER CODE END PV */
 
@@ -147,9 +147,13 @@ USBD_CDC_ItfTypeDef USBD_Interface_fops_FS =
 };
 
 /* Private functions ---------------------------------------------------------*/
- float Uint32_To_Float(uint32_t n)
+float Uint32_To_Float(uint32_t n)
 {
    return (float)(*(float*)&n);
+}
+
+uint32_t Combine_Byte(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+    return a << 24 | b << 16 | c << 8 | d;
 }
 
 /**
@@ -276,41 +280,23 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 			 */
 			if (*Len != 13)
 				break;
-			
-			vx = Buf[1] << 24 | Buf[2] << 16 | Buf[3] << 8 | Buf[4];
-			vy = Buf[5] << 24 | Buf[6] << 16 | Buf[7] << 8 | Buf[8];
-			vw = Buf[9] << 24 | Buf[10] << 16 | Buf[11] << 8 | Buf[12];
+			vx = Combine_Byte((uint8_t) Buf[1], (uint8_t) Buf[2], (uint8_t) Buf[3], (uint8_t) Buf[4]);
+			vy = Combine_Byte((uint8_t) Buf[5], (uint8_t) Buf[6], (uint8_t) Buf[7], (uint8_t) Buf[8]);
+			vw = Combine_Byte((uint8_t) Buf[9], (uint8_t) Buf[10], (uint8_t) Buf[11], (uint8_t) Buf[12]);
 			MOTOR_Set_Ik(Uint32_To_Float(vx), Uint32_To_Float(vy), Uint32_To_Float(vw));
 			break;
+		
 		case 'P':
 			/*
-			 * Motor P, expect 2 int variables, the length is 9 bytes
+			 * Motor PID, expect 4 int variables, the length is 17 bytes
 			 */
-			if (*Len != 9)
+			if (*Len != 17)
 				break;
-			motor = Buf[1] << 24 | Buf[2] << 16 | Buf[3] << 8 | Buf[4];
-			constant = Buf[5] << 24 | Buf[6] << 16 | Buf[7] << 8 | Buf[8];
-			MOTOR_Set_P(motor, constant);
-			break;
-		case 'I':
-			/*
-			 * Motor I, expect 2 int variables, the length is 9 bytes
-			 */
-			if (*Len != 9)
-				break;
-			motor = Buf[1] << 24 | Buf[2] << 16 | Buf[3] << 8 | Buf[4];
-			constant = Buf[5] << 24 | Buf[6] << 16 | Buf[7] << 8 | Buf[8];
-			MOTOR_Set_I(motor, constant);
-			break;
-		case 'D':
-			/*
-			 * Motor D, expect 2 int variables, the length is 9 bytes
-			 */
-			if (*Len != 9)
-				break;
-			motor = Buf[1] << 24 | Buf[2] << 16 | Buf[3] << 8 | Buf[4];
-			constant = Buf[5] << 24 | Buf[6] << 16 | Buf[7] << 8 | Buf[8];
-			MOTOR_Set_D(motor, constant);
+			motor = Combine_Byte((uint8_t) Buf[1], (uint8_t) Buf[2], (uint8_t) Buf[3], (uint8_t) Buf[4]);
+			kp = Combine_Byte((uint8_t) Buf[5], (uint8_t) Buf[6], (uint8_t) Buf[7], (uint8_t) Buf[8]);
+			ki = Combine_Byte((uint8_t) Buf[9], (uint8_t) Buf[10], (uint8_t) Buf[11], (uint8_t) Buf[12]);
+			kd = Combine_Byte((uint8_t) Buf[13], (uint8_t) Buf[14], (uint8_t) Buf[15], (uint8_t) Buf[16]);
+			MOTOR_Set_PID(motor, kp, ki, kd);
 			break;
 	}
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);

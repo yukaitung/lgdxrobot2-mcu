@@ -205,19 +205,11 @@ void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w)
 		MOTOR_Set_Pwm(i, abs((int) roundf(motor_target_velocity[i] / MOTOR_MIN_STEP)));
 	}
 }
-void MOTOR_Set_P(int motor, int constant)
+void MOTOR_Set_PID(int motor, int kp, int ki, int kd)
 {
-	motor_kp[motor] = constant;
-}
-
-void MOTOR_Set_I(int motor, int constant)
-{
-	motor_ki[motor] = constant;
-}
-
-void MOTOR_Set_D(int motor, int constant)
-{
-	motor_kd[motor] = constant;
+	motor_kp[motor] = kp;
+	motor_ki[motor] = ki;
+	motor_kd[motor] = kd;
 }
 
 float MOTOR_Get_Velocity(int motor)
@@ -230,7 +222,16 @@ float MOTOR_Get_Target_Velocity(int motor)
 	return motor_target_velocity[motor];
 }
 
-int *MOTOR_Pwm()
+int MOTOR_Get_PID(int pid, int motor)
 {
-	return motor_pwm;
+	switch(pid)
+	{
+		case 0:
+			return motor_kp[motor];
+		case 1:
+			return motor_ki[motor];
+		case 2:
+			return motor_kd[motor];
+	}
+	return -1;
 }

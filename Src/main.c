@@ -50,6 +50,10 @@ TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim5;
 
+uint8_t msg[128] = {'\0'};
+uint32_t temp = 0;
+int index = 0;
+
 /* USER CODE BEGIN PV */
 /* USER CODE END PV */
 
@@ -69,6 +73,52 @@ static void MX_TIM5_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+uint32_t Float_To_Uint32(float n)
+{
+    return (uint32_t)(*(uint32_t*)&n);
+}
+
+void Broadcast_Status()
+{
+	// Header = A
+	msg[0] = 0xAA;
+	msg[1] = 0;
+	index = 2;
+	for(int i = 0; i < WHEEL_COUNT; i++)
+	{
+		temp = Float_To_Uint32(MOTOR_Get_Target_Velocity(i));
+		msg[index++] = (temp & 4278190080) >> 24;
+		msg[index++] = (temp & 16711680) >> 16;
+		msg[index++] = (temp & 65280) >> 8;
+		msg[index++] = temp & 255;
+	}
+	for(int i = 0; i < WHEEL_COUNT; i++)
+	{
+		temp = Float_To_Uint32(MOTOR_Get_Velocity(i));
+		msg[index++] = (temp & 4278190080) >> 24;
+		msg[index++] = (temp & 16711680) >> 16;
+		msg[index++] = (temp & 65280) >> 8;
+		msg[index++] = temp & 255;
+	}
+	for(int i = 0; i < 3; i++)
+	{
+		for(int j = 0; j < WHEEL_COUNT; j++)
+		{
+			temp = MOTOR_Get_PID(i, j);
+			msg[index++] = (temp & 4278190080) >> 24;
+			msg[index++] = (temp & 16711680) >> 16;
+			msg[index++] = (temp & 65280) >> 8;
+			msg[index++] = temp & 255;
+		}
+	}
+	msg[index++] = '\0';
+	msg[1] = index - 1;
+	CDC_Transmit_FS(msg, index);
+	
+	// Header = C
+	// TODO
+}
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	static int tim2_count = 0; 
@@ -80,6 +130,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		{
 			tim2_count = 0;
 			MOTOR_PID();
+			Broadcast_Status();
 		}
 	}
 }
@@ -128,11 +179,8 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	uint8_t msg[150] = {'\0'};
   while (1)
-  {
-		sprintf((char*) msg, "MV: %f, %f, %f, %f TV: %f, %f, %f, %f\r\n", MOTOR_Get_Velocity(0), MOTOR_Get_Velocity(1), MOTOR_Get_Velocity(2), MOTOR_Get_Velocity(3), MOTOR_Get_Target_Velocity(0), MOTOR_Get_Target_Velocity(1), MOTOR_Get_Target_Velocity(2), MOTOR_Get_Target_Velocity(3));
-		CDC_Transmit_FS(msg, strlen((char*) msg));
+  {		
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
