@@ -29,20 +29,22 @@ This project assumes char is 1 byte; int and float are 4 bytes.
 |--------------------------|----------------|--------------------|--------------------|--------------------|--------------------|
 | Motor Inverse Kinematics | M              | X Velocity (float) | Y Velocity (float) | w Velocity (float) |                    |
 | Single Motor Velocity    | V              | Motor Number (int) | Velocity (float)   |                    |                    |
-| Motor PID                | P              | Motor Number (int) | P Constant (int)   | I Constant (int)   | D Constant (int)   |
+| Motor PID                | P              | Motor Number (int) | P Constant (float) | I Constant (float) | D Constant (float) |
 
 Note: Motor number starting from 0.
 
 ### MCU to PC
 
-#### Table Of Data
-
-
-| Description     | Header (char) | Value Group 1                      | Value Group 2                        | Value Group 3             |
-|-----------------|---------------|------------------------------------|--------------------------------------|---------------------------|
-| Wheels Velocity | A             | Target Wheels Velocity (4 * float) | Measured Wheels Velocity (4 * float) |                           |
-| PID Parameters  | B             | P Constant (4 * int)               | I Constant (4 * int)                 | D Constant (4 * int)      |
-| Robot Status    | C             | Motor Enabled (int)                | E-Stop Triggered (int)               | Battery Voltage (2 * int) |
+* 0xAA Pattern
+* The length of the package in bytes (char), including 0xAA Pattern, data and '\0'
+* Target Wheels Velocity (4 * float)
+* Measured Wheels Velocity (4 * float)
+* P Constant (4 * float)
+* I Constant (4 * float)
+* D Constant (4 * float)
+* Motor Enabled (int)
+* E-Stop Triggered (int)
+* Battery Voltage (2 * int)
 
 ## Calculation
 

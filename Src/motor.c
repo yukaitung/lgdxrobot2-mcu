@@ -217,7 +217,7 @@ void MOTOR_Set_Single_Velocity(int motor, float velocity)
 	MOTOR_Set_Pwm(motor, abs((int) roundf(motor_target_velocity[motor] / motor_min_step[motor])));
 }
 
-void MOTOR_Set_PID(int motor, int kp, int ki, int kd)
+void MOTOR_Set_PID(int motor, float kp, float ki, float kd)
 {
 	motor_kp[motor] = kp;
 	motor_ki[motor] = ki;
@@ -234,7 +234,7 @@ float MOTOR_Get_Target_Velocity(int motor)
 	return motor_target_velocity[motor];
 }
 
-int MOTOR_Get_PID(int pid, int motor)
+float MOTOR_Get_PID(int pid, int motor)
 {
 	switch(pid)
 	{

@@ -104,7 +104,7 @@ void Broadcast_Status()
 	{
 		for(int j = 0; j < WHEEL_COUNT; j++)
 		{
-			temp = MOTOR_Get_PID(i, j);
+			temp = Float_To_Uint32(MOTOR_Get_PID(i, j));
 			msg[index++] = (temp & 4278190080) >> 24;
 			msg[index++] = (temp & 16711680) >> 16;
 			msg[index++] = (temp & 65280) >> 8;

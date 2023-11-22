@@ -308,7 +308,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 			kp = Combine_Byte((uint8_t) Buf[5], (uint8_t) Buf[6], (uint8_t) Buf[7], (uint8_t) Buf[8]);
 			ki = Combine_Byte((uint8_t) Buf[9], (uint8_t) Buf[10], (uint8_t) Buf[11], (uint8_t) Buf[12]);
 			kd = Combine_Byte((uint8_t) Buf[13], (uint8_t) Buf[14], (uint8_t) Buf[15], (uint8_t) Buf[16]);
-			MOTOR_Set_PID(motor, kp, ki, kd);
+			MOTOR_Set_PID(motor, Uint32_To_Float(kp), Uint32_To_Float(ki), Uint32_To_Float(kd));
 			break;
 	}
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);

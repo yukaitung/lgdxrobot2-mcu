@@ -24,10 +24,10 @@ void MOTOR_Set_Power(bool enable);
 void MOTOR_PID();
 void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w);
 void MOTOR_Set_Single_Velocity(int motor, float velocity);
-void MOTOR_Set_PID(int motor, int kp, int ki, int kd);
+void MOTOR_Set_PID(int motor, float kp, float ki, float kd);
 float MOTOR_Get_Velocity(int motor);
 float MOTOR_Get_Target_Velocity(int motor);
-int MOTOR_Get_PID(int pid, int motor);
+float MOTOR_Get_PID(int pid, int motor);
 int MOTOR_Get_PWM(int motor);
 
 #endif
