@@ -50,11 +50,14 @@ TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim5;
 
-uint8_t msg[128] = {'\0'};
-uint32_t temp = 0;
-int index = 0;
-
 /* USER CODE BEGIN PV */
+// INA219
+int currentIna219 = 0;
+const uint16_t ina219Addr[2] = {0x80, 0x82};
+uint8_t ina219Voltage[1] = {0x02};
+uint8_t ina219VoltageData[2] = {0x00, 0x00};
+uint32_t ina219VoltageValue[2] = {0, 0};
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -72,7 +75,6 @@ static void MX_TIM5_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 uint32_t Float_To_Uint32(float n)
 {
     return (uint32_t)(*(uint32_t*)&n);
@@ -80,7 +82,9 @@ uint32_t Float_To_Uint32(float n)
 
 void Broadcast_Status()
 {
-	// Header = A
+	static uint8_t msg[128] = {'\0'};
+	static int index = 0;
+	static uint32_t temp = 0;
 	msg[0] = 0xAA;
 	msg[1] = 0;
 	index = 2;
@@ -119,12 +123,45 @@ void Broadcast_Status()
 		msg[index++] = (temp & 65280) >> 8;
 		msg[index++] = temp & 255;
 	}
+	for(int i = 0; i < 2; i++)
+	{
+		temp = ina219VoltageValue[i];
+		msg[index++] = (temp & 4278190080) >> 24;
+		msg[index++] = (temp & 16711680) >> 16;
+		msg[index++] = (temp & 65280) >> 8;
+		msg[index++] = temp & 255;
+	}
 	msg[index++] = '\0';
 	msg[1] = index - 1;
 	CDC_Transmit_FS(msg, index);
-	
-	// Header = C
-	// TODO
+}
+
+void Update_Ina219()
+{
+	// Initalise INA219 Communication
+	HAL_I2C_Master_Transmit_IT(&hi2c1, ina219Addr[currentIna219], ina219Voltage, 1);
+}
+
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+  // Sent Data To INA219
+	if(hi2c->Instance == hi2c1.Instance) 
+	{
+		HAL_I2C_Master_Receive_IT(&hi2c1, ina219Addr[currentIna219], ina219VoltageData, 2);
+	}
+}
+
+void HAL_I2C_MasterRxCpltCallback (I2C_HandleTypeDef *hi2c)
+{
+  // Receive Data From INA219
+	if(hi2c->Instance == hi2c1.Instance) 
+	{
+		ina219VoltageValue[currentIna219] = (ina219VoltageData[0] << 8 | ina219VoltageData[1]) >> 3;
+		if(currentIna219 == 1)
+			currentIna219 = 0;
+		else
+			currentIna219 = 1;
+	}
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
@@ -139,6 +176,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 			tim2_count = 0;
 			MOTOR_PID();
 			Broadcast_Status();
+			Update_Ina219();
 		}
 	}
 }

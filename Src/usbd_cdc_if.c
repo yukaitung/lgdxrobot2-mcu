@@ -130,6 +130,14 @@ static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
 static int8_t CDC_TransmitCplt_FS(uint8_t *pbuf, uint32_t *Len, uint8_t epnum);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
+float Uint32_To_Float(uint32_t n)
+{
+   return (float)(*(float*)&n);
+}
+
+uint32_t Combine_Byte(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+    return a << 24 | b << 16 | c << 8 | d;
+}
 
 /* USER CODE END PRIVATE_FUNCTIONS_DECLARATION */
 
@@ -147,15 +155,6 @@ USBD_CDC_ItfTypeDef USBD_Interface_fops_FS =
 };
 
 /* Private functions ---------------------------------------------------------*/
-float Uint32_To_Float(uint32_t n)
-{
-   return (float)(*(float*)&n);
-}
-
-uint32_t Combine_Byte(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
-    return a << 24 | b << 16 | c << 8 | d;
-}
-
 /**
   * @brief  Initializes the CDC media low layer over the FS USB IP
   * @retval USBD_OK if all operations are OK else USBD_FAIL
