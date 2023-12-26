@@ -16,8 +16,8 @@
 #define ENCODER_MIN_ANGULAR 0.00158666296 // 2pi / (3960)
 
 // Constants - PID Configuration
-#define PID_RESPONSE_TIME_MS 10
-#define TIME_FACTOR 100 // 1 second / PID_RESPONSE_TIME_MS
+#define PID_RESPONSE_TIME_MS 20
+#define TIME_FACTOR 50 // 1 second / PID_RESPONSE_TIME_MS
 
 void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *m1_htim, TIM_HandleTypeDef *m2_htim, TIM_HandleTypeDef *m3_htim, TIM_HandleTypeDef *m4_htim);
 void MOTOR_Set_Power(bool enable);

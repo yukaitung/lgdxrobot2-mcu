@@ -25,9 +25,9 @@ uint16_t encoder_value[WHEEL_COUNT] = {0, 0, 0, 0};
 uint16_t encoder_last_value[WHEEL_COUNT] = {0, 0, 0, 0};
 
 // PID
-float motor_kp[WHEEL_COUNT] = {0, 0, 0, 0};
-float motor_ki[WHEEL_COUNT] = {0, 0, 0, 0};
-float motor_kd[WHEEL_COUNT] = {0, 0, 0, 0};
+float motor_kp[WHEEL_COUNT] = {6, 3, 6.5, 7};
+float motor_ki[WHEEL_COUNT] = {0.8, 0.8, 0.8, 0.85};
+float motor_kd[WHEEL_COUNT] = {2, 3, 1, 0.5};
 float pid_accumulate_error[WHEEL_COUNT] = {0, 0, 0, 0};
 float pid_last_error[WHEEL_COUNT] = {0, 0, 0, 0};
 

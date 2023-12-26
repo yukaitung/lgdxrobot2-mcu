@@ -33,7 +33,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define TIMER2_COUNT_MAX 10
+#define TIMER2_COUNT_MAX 20
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
