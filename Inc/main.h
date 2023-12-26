@@ -79,8 +79,8 @@ void Error_Handler(void);
 #define L_GREEN_GPIO_Port GPIOB
 #define L_RED_Pin GPIO_PIN_2
 #define L_RED_GPIO_Port GPIOB
-#define BT2_SW_Pin GPIO_PIN_10
-#define BT2_SW_GPIO_Port GPIOB
+#define BT1_SW_Pin GPIO_PIN_10
+#define BT1_SW_GPIO_Port GPIOB
 #define M1_IN2_Pin GPIO_PIN_12
 #define M1_IN2_GPIO_Port GPIOB
 #define M1_IN1_Pin GPIO_PIN_13

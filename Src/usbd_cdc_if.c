@@ -34,6 +34,7 @@
 /* Private variables ---------------------------------------------------------*/
 uint32_t motor = 0, kp = 0, ki = 0, kd = 0;
 uint32_t vx = 0, vy = 0, vw = 0;
+uint32_t enable = 0;
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -295,6 +296,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 				break;
 			vx = Combine_Byte((uint8_t) Buf[5], (uint8_t) Buf[6], (uint8_t) Buf[7], (uint8_t) Buf[8]);
 			MOTOR_Set_Single_Velocity(motor, Uint32_To_Float(vx));
+			break;
 		case 'P':
 			/*
 			 * Motor PID, expect 4 int variables, the length is 17 bytes
@@ -308,6 +310,15 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 			ki = Combine_Byte((uint8_t) Buf[9], (uint8_t) Buf[10], (uint8_t) Buf[11], (uint8_t) Buf[12]);
 			kd = Combine_Byte((uint8_t) Buf[13], (uint8_t) Buf[14], (uint8_t) Buf[15], (uint8_t) Buf[16]);
 			MOTOR_Set_PID(motor, Uint32_To_Float(kp), Uint32_To_Float(ki), Uint32_To_Float(kd));
+			break;
+		case 'E':
+			/*
+			 * Software E-Stop, expect 1 int variables, the length is 5 bytes
+			 */
+			if (*Len != 5)
+				break;
+			enable = Combine_Byte((uint8_t) Buf[1], (uint8_t) Buf[2], (uint8_t) Buf[3], (uint8_t) Buf[4]);
+			MOTOR_Set_Software_E_Stop(enable);
 			break;
 	}
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);

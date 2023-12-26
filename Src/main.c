@@ -52,11 +52,16 @@ TIM_HandleTypeDef htim5;
 
 /* USER CODE BEGIN PV */
 // INA219
+enum __battery {
+  actuator_battery,
+  logic_battery,
+	battery_count
+} battery;
 int currentIna219 = 0;
-const uint16_t ina219Addr[2] = {0x80, 0x82};
-uint8_t ina219Voltage[1] = {0x02};
-uint8_t ina219VoltageData[2] = {0x00, 0x00};
-uint32_t ina219VoltageValue[2] = {0, 0};
+const uint16_t ina219Addr[battery_count] = {0x80, 0x82};
+uint8_t ina219VoltageRegister[1] = {0x02};
+uint8_t ina219VoltageData[battery_count] = {0x00, 0x00};
+uint32_t ina219VoltageValue[battery_count] = {0, 0};
 
 /* USER CODE END PV */
 
@@ -131,6 +136,14 @@ void Broadcast_Status()
 		msg[index++] = (temp & 65280) >> 8;
 		msg[index++] = temp & 255;
 	}
+	for(int i = 0; i < 2; i++)
+	{
+		temp = MOTOR_Get_E_Stop_Status(i);
+		msg[index++] = (temp & 4278190080) >> 24;
+		msg[index++] = (temp & 16711680) >> 16;
+		msg[index++] = (temp & 65280) >> 8;
+		msg[index++] = temp & 255;
+	}
 	msg[index++] = '\0';
 	msg[1] = index - 1;
 	CDC_Transmit_FS(msg, index);
@@ -139,7 +152,7 @@ void Broadcast_Status()
 void Update_Ina219()
 {
 	// Initalise INA219 Communication
-	HAL_I2C_Master_Transmit_IT(&hi2c1, ina219Addr[currentIna219], ina219Voltage, 1);
+	HAL_I2C_Master_Transmit_IT(&hi2c1, ina219Addr[currentIna219], ina219VoltageRegister, 1);
 }
 
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
@@ -157,10 +170,11 @@ void HAL_I2C_MasterRxCpltCallback (I2C_HandleTypeDef *hi2c)
 	if(hi2c->Instance == hi2c1.Instance) 
 	{
 		ina219VoltageValue[currentIna219] = (ina219VoltageData[0] << 8 | ina219VoltageData[1]) >> 3;
-		if(currentIna219 == 1)
-			currentIna219 = 0;
+		if(ina219VoltageValue[actuator_battery] < 2000) // Lower than 8V which lower than 4 * 18650 lowest vlotage (2 * 4)
+			MOTOR_Set_Hardware_E_Stop(1);
 		else
-			currentIna219 = 1;
+			MOTOR_Set_Hardware_E_Stop(0);
+		currentIna219 = currentIna219 == actuator_battery ? logic_battery : actuator_battery;
 	}
 }
 
@@ -600,7 +614,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, D_STBY_Pin|M3_IN2_Pin|M3_IN1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, L_GREEN_Pin|L_RED_Pin|BT2_SW_Pin|M1_IN2_Pin
+  HAL_GPIO_WritePin(GPIOB, L_GREEN_Pin|L_RED_Pin|BT1_SW_Pin|M1_IN2_Pin
                           |M1_IN1_Pin|M2_IN1_Pin|M2_IN2_Pin|M4_IN1_Pin
                           |M4_IN2_Pin, GPIO_PIN_RESET);
 
@@ -623,10 +637,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : L_GREEN_Pin L_RED_Pin BT2_SW_Pin M1_IN2_Pin
+  /*Configure GPIO pins : L_GREEN_Pin L_RED_Pin BT1_SW_Pin M1_IN2_Pin
                            M1_IN1_Pin M2_IN1_Pin M2_IN2_Pin M4_IN1_Pin
                            M4_IN2_Pin */
-  GPIO_InitStruct.Pin = L_GREEN_Pin|L_RED_Pin|BT2_SW_Pin|M1_IN2_Pin
+  GPIO_InitStruct.Pin = L_GREEN_Pin|L_RED_Pin|BT1_SW_Pin|M1_IN2_Pin
                           |M1_IN1_Pin|M2_IN1_Pin|M2_IN2_Pin|M4_IN1_Pin
                           |M4_IN2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
