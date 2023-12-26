@@ -4,6 +4,8 @@ LGDX Robot 2 is a DIY universal mecanum wheel chassis project. The LGDX Robot 2 
 
 The goal of version 2 are reducing cost and hardware dependency. This project uses [BlackPill](https://github.com/WeActStudio/WeActStudio.MiniSTM32F4x1) for MCU, TB6612FNG for motors control and INA219 for measuring voltage of batteries. It removed PCA9685 because the puepose is different in [old project](https://gitlab.com/yukaitung/LGDXRobot-MCU).
 
+Refer [doc/Chassis2.kicad_sch](doc/Chassis2.kicad_sch) for schematic design.
+
 ### Links
 
 *   [LGDXRobot2-MCU](https://gitlab.com/yukaitung/lgdxrobot2-mcu)
