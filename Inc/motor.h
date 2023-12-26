@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 // Constants
-#define MAX_PWM_CCR 1027
+#define MAX_PWM_CCR 71999
 // Constants - Chassis Configuration
 #define CHASSIS_LX 0.237
 #define CHASSIS_LY 0.287

@@ -6,26 +6,29 @@
 // Private Define
 #define ENCODER_LIMIT 65536
 
+// Edit
+float motor_max_speed[WHEEL_COUNT] = {10.948, 11.424, 11.1066, 10.6306}; // By testing
+float motor_min_step[WHEEL_COUNT] = {0.0001520576675, 0.0001586688704, 0.0001542604758, 0.0001476492729}; // MOTOR_MAX_SPEED / MAX_PWM_CCR
+
 // Private Variables
 TIM_HandleTypeDef *m_pwm_htim;
 TIM_HandleTypeDef *motor_htim[WHEEL_COUNT];
+
 // Motor
 float motor_velocity[WHEEL_COUNT] = {0, 0, 0, 0};
 float motor_target_velocity[WHEEL_COUNT] = {0, 0, 0, 0};
 int motor_pwm[WHEEL_COUNT] = {0, 0, 0, 0};
+
 // Encoder
 uint16_t encoder_value[WHEEL_COUNT] = {0, 0, 0, 0};
 uint16_t encoder_last_value[WHEEL_COUNT] = {0, 0, 0, 0};
+
 // PID
-float motor_kp[WHEEL_COUNT] = {0.7, 0.6, 0.55, 0.65};
+float motor_kp[WHEEL_COUNT] = {0, 0, 0, 0};
 float motor_ki[WHEEL_COUNT] = {0, 0, 0, 0};
-float motor_kd[WHEEL_COUNT] = {3, 3, 3, 3};
+float motor_kd[WHEEL_COUNT] = {0, 0, 0, 0};
 float pid_accumulate_error[WHEEL_COUNT] = {0, 0, 0, 0};
 float pid_last_error[WHEEL_COUNT] = {0, 0, 0, 0};
-
-// Edit
-float motor_max_speed[WHEEL_COUNT] = {10.948, 11.424, 11.1066, 10.6306}; // By testing
-float motor_min_step[WHEEL_COUNT] = {0.0106601753, 0.0111236611, 0.0108146056, 0.0103511198}; // MOTOR_MAX_SPEED / MAX_PWM_CCR
 
 // Private Function
 int safe_unsigned_subtract(int a, int b, int limit)
@@ -182,10 +185,11 @@ void MOTOR_PID()
 		// Calculate error
 		float error = motor_target_velocity[i] - motor_velocity[i];
 		pid_accumulate_error[i] += error;
-		if(pid_accumulate_error[i] >= motor_max_speed[i])
-			pid_accumulate_error[i] = motor_max_speed[i];
-		else if(pid_accumulate_error[i] <= -motor_max_speed[i])
-			pid_accumulate_error[i] = -motor_max_speed[i];
+		// Discard overshooting error
+		if((motor_velocity[i] + pid_accumulate_error[i]) >= motor_max_speed[i])
+			pid_accumulate_error[i] = motor_max_speed[i] - motor_velocity[i];
+		else if((motor_velocity[i] + pid_accumulate_error[i]) <= -motor_max_speed[i])
+			pid_accumulate_error[i] = -motor_max_speed[i] - motor_velocity[i];
 		float error_rate = error - pid_last_error[i];
 		
 		// Apply PID
