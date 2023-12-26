@@ -16,6 +16,7 @@ TIM_HandleTypeDef *motor_htim[WHEEL_COUNT];
 
 // Motor
 float motor_velocity[WHEEL_COUNT] = {0, 0, 0, 0};
+float motor_last_velocity[WHEEL_COUNT] = {0, 0, 0, 0}; // Discard anomaly in encoder
 float motor_target_velocity[WHEEL_COUNT] = {0, 0, 0, 0};
 int motor_pwm[WHEEL_COUNT] = {0, 0, 0, 0};
 
@@ -181,23 +182,26 @@ void MOTOR_PID()
 			// Motor 1, 3
 			motor_velocity[i] = (-1 * safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], ENCODER_LIMIT) * ENCODER_MIN_ANGULAR) * TIME_FACTOR;
 		}
-		
+		if(motor_velocity[i] > motor_max_speed[i] || motor_velocity[i] < -motor_max_speed[i])
+			motor_velocity[i] = motor_last_velocity[i];
+
 		// Calculate error
 		float error = motor_target_velocity[i] - motor_velocity[i];
 		pid_accumulate_error[i] += error;
 		// Discard overshooting error
-		if((motor_velocity[i] + pid_accumulate_error[i]) >= motor_max_speed[i])
+		if(motor_velocity[i] + error >= motor_max_speed[i])
 			pid_accumulate_error[i] = motor_max_speed[i] - motor_velocity[i];
-		else if((motor_velocity[i] + pid_accumulate_error[i]) <= -motor_max_speed[i])
+		else if(motor_velocity[i] + error <= -motor_max_speed[i])
 			pid_accumulate_error[i] = -motor_max_speed[i] - motor_velocity[i];
 		float error_rate = error - pid_last_error[i];
 		
 		// Apply PID
 		int pid = roundf((motor_kp[i] * error + motor_ki[i] * pid_accumulate_error[i] + motor_kd[i] * error_rate) / motor_min_step[i]);
-		MOTOR_Set_Pwm(i, (motor_pwm[i] + pid));
+		MOTOR_Set_Pwm(i, pid);
 		
 		pid_last_error[i] = error;
 		encoder_last_value[i] = encoder_value[i];
+		motor_last_velocity[i] = motor_velocity[i];
 	}
 }
 
@@ -210,7 +214,7 @@ void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w)
 	for(int i = 0; i < WHEEL_COUNT; i++)
 	{
 		motor_target_velocity[i] >= 0 ? MOTOR_Set_Direction(i, true) : MOTOR_Set_Direction(i, false);
-		MOTOR_Set_Pwm(i, abs((int) roundf(motor_target_velocity[i] / motor_min_step[i])));
+		//MOTOR_Set_Pwm(i, abs((int) roundf(motor_target_velocity[i] / motor_min_step[i])));
 	}
 }
 
@@ -218,7 +222,7 @@ void MOTOR_Set_Single_Velocity(int motor, float velocity)
 {
 	motor_target_velocity[motor] = velocity;
 	motor_target_velocity[motor] >= 0 ? MOTOR_Set_Direction(motor, true) : MOTOR_Set_Direction(motor, false);
-	MOTOR_Set_Pwm(motor, abs((int) roundf(motor_target_velocity[motor] / motor_min_step[motor])));
+	//MOTOR_Set_Pwm(motor, abs((int) roundf(motor_target_velocity[motor] / motor_min_step[motor])));
 }
 
 void MOTOR_Set_PID(int motor, float kp, float ki, float kd)
