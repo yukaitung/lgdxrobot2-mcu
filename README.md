@@ -11,9 +11,13 @@ Refer [doc/Chassis2.kicad_sch](doc/Chassis2.kicad_sch) for schematic design.
 *   [LGDXRobot2-MCU](https://gitlab.com/yukaitung/lgdxrobot2-mcu)
 *   [LGDXRobot2-ChassisTuner](https://gitlab.com/yukaitung/lgdxrobot2-chassistuner)
 
-## Communication
+# How it works
 
-The communication is managed by STM32 Virtual Com Port, it is compatible to Serial Port programming. When initialising connection to MCU, keep all setting (Baud Rate, Data Bits, etc.) in default. To reduce overhead in communication, this project relys on raw data to communicate with MCU, below is an example. 
+The firmware is developed with STM32 HAL Library. It utilises Timer for encoders (TIM1, TIM3, TIM4, TIM5) and PWM generation (TIM2), I2C for communication with INA219 (I2C1), as well as Virtual Port Com for communication with PC.
+
+### Hardware Communication
+
+The communication is managed by STM32 Virtual Com Port, it is compatible to Serial Port programming. When initialising connection to MCU, keep all setting (Baud Rate, Data Bits, etc.) to default. To reduce overhead in communication, this project relys on raw data to communicate with MCU, below is an example to send command from PC. 
 
 ``` C++
 int p = 1;
@@ -49,9 +53,9 @@ Note2: 0 = Disable, 1 = Enable
 
 ### MCU to PC
 
-A message broadcast from MCU about every 20ms
+A message broadcast from MCU about every 20ms, below is the sequence of the message.
 
-* 0xAA Pattern
+* 0xAA Pattern (char)
 * The length of the package in bytes (char), including 0xAA Pattern, data and '\0'
 * Target Wheels Velocity (4 * float)
 * Measured Wheels Velocity (4 * float)
@@ -64,7 +68,27 @@ A message broadcast from MCU about every 20ms
 
 Note1: 0 = Disable, 1 = Enable
 
-## Calculation
+# Getting started
+
+### Prerequisite
+
+This project required a mecanum wheel chassis and control board (Refer [doc/Chassis2.kicad_sch](doc/Chassis2.kicad_sch) for schematic design).
+
+In the schematic, R1 is 100Ω, R2 and R3 are 4.7KΩ. Choose the motor with gear ratio no lower than 1:90 to ensure enough torque.
+
+Requeired software are [STM32CubeMX](https://www.st.com/en/development-tools/stm32cubemx.html), [STSW-LINK009](https://www.st.com/en/development-tools/stsw-link009.html) ([Press here for ARM64 PC](https://community.st.com/t5/stm32-mcus-boards-and-hardware/stlink-stcubeprogrammer-support-on-windows-arm64/td-p/224127)) and an ARM IDE. This project uses [MDK-Community Edition](https://www2.keil.com/mdk5/editions/community).
+
+A ST-LINK/V2 is required to download program.
+
+### Build & Run
+
+1. Launch STM32CubeMX to generate code and launch ARM IDE
+2. Download program in the IDE
+3. Test with [LGDXRobot2-ChassisTuner](https://gitlab.com/yukaitung/lgdxrobot2-chassistuner)
+
+# Calculation
+
+This section explains the decision for some values.
 
 ### PWM Gwnwration
 
