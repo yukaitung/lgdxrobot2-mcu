@@ -144,8 +144,7 @@ void Broadcast_Status()
 		msg[index++] = (temp & 65280) >> 8;
 		msg[index++] = temp & 255;
 	}
-	msg[index++] = '\0';
-	msg[1] = index - 1;
+	msg[1] = index;
 	CDC_Transmit_FS(msg, index);
 }
 

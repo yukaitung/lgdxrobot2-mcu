@@ -55,8 +55,8 @@ Note2: 0 = Disable, 1 = Enable
 
 A message broadcast from MCU about every 20ms, below is the sequence of the message.
 
-* 0xAA Pattern (char)
-* The length of the package in bytes (char), including 0xAA Pattern, data and '\0'
+* 0xAA Pattern
+* The length of the package in bytes (char), including 0xAA Pattern and data (114 Bytes)
 * Target Wheels Velocity (4 * float)
 * Measured Wheels Velocity (4 * float)
 * P Constant (4 * float)
