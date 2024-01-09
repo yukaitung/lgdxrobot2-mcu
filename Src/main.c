@@ -91,8 +91,7 @@ void Broadcast_Status()
 	static int index = 0;
 	static uint32_t temp = 0;
 	msg[0] = 0xAA;
-	msg[1] = 0;
-	index = 2;
+	index = 5;
 	for(int i = 0; i < WHEEL_COUNT; i++)
 	{
 		temp = Float_To_Uint32(MOTOR_Get_Target_Velocity(i));
@@ -120,14 +119,6 @@ void Broadcast_Status()
 			msg[index++] = temp & 255;
 		}
 	}
-	for(int i = 0; i < WHEEL_COUNT; i++)
-	{
-		temp = MOTOR_Get_PWM(i);
-		msg[index++] = (temp & 4278190080) >> 24;
-		msg[index++] = (temp & 16711680) >> 16;
-		msg[index++] = (temp & 65280) >> 8;
-		msg[index++] = temp & 255;
-	}
 	for(int i = 0; i < 2; i++)
 	{
 		temp = ina219VoltageValue[i];
@@ -144,7 +135,12 @@ void Broadcast_Status()
 		msg[index++] = (temp & 65280) >> 8;
 		msg[index++] = temp & 255;
 	}
-	msg[1] = index;
+	// Final: Size
+	temp = index;
+	msg[1] = (temp & 4278190080) >> 24;
+	msg[2] = (temp & 16711680) >> 16;
+	msg[3] = (temp & 65280) >> 8;
+	msg[4] = temp & 255;
 	CDC_Transmit_FS(msg, index);
 }
 

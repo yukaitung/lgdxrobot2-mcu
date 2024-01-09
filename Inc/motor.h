@@ -27,7 +27,6 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *m1_htim, TIM_Han
 float MOTOR_Get_Velocity(int motor);
 float MOTOR_Get_Target_Velocity(int motor);
 float MOTOR_Get_PID(int pid, int motor);
-int MOTOR_Get_PWM(int motor);
 int MOTOR_Get_E_Stop_Status(int status);
 
 // Set

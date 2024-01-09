@@ -243,8 +243,8 @@ void MOTOR_Set_Single_Velocity(int motor, float velocity)
 {
 	motor_target_velocity[motor] = velocity;
 	motor_target_velocity[motor] >= 0 ? MOTOR_Set_Direction(motor, true) : MOTOR_Set_Direction(motor, false);
-	if(motor_target_velocity[motor] == 0)
-			MOTOR_Set_Pwm(motor, 0);
+	if(motor_target_velocity[motor] == 0) 
+		MOTOR_Set_Pwm(motor, 0);
 }
 
 void MOTOR_Set_PID(int motor, float kp, float ki, float kd)
@@ -308,20 +308,30 @@ void MOTOR_PID()
 			motor_velocity[i] = motor_last_velocity[i];
 
 		// Calculate error 
-		float error = motor_target_velocity[i] - motor_velocity[i];
+		float error = fabs(motor_target_velocity[i]) - fabs(motor_velocity[i]);
 		pid_accumulate_error[i] += error;
 		// Discard overshooting error
 		if(pid_accumulate_error[i] >= motor_max_speed[i])
 			pid_accumulate_error[i] = motor_max_speed[i];
-		else if(pid_accumulate_error[i] <= -motor_max_speed[i])
+		if(pid_accumulate_error[i] <= -motor_max_speed[i])
 			pid_accumulate_error[i] = -motor_max_speed[i];
-		float error_rate = error - pid_last_error[i];
+		float error_rate = error - fabs(pid_last_error[i]);
 		
 		// Apply PID
 		int pid = roundf((motor_kp[i] * error + motor_ki[i] * pid_accumulate_error[i] + motor_kd[i] * error_rate) / motor_min_step[i]);
-		if(motor_target_velocity[i] != 0)
-			MOTOR_Set_Pwm(i, pid);
-		
+		if(motor_target_velocity[i] != 0) 
+		{
+			if(pid >= 0) 
+			{
+				MOTOR_Set_Pwm(i, pid);
+			}
+			else 
+			{
+				// Decrease speed for -ve error
+				MOTOR_Set_Pwm(i, 0);
+			}
+		}
+
 		pid_last_error[i] = error;
 		encoder_last_value[i] = encoder_value[i];
 		motor_last_velocity[i] = motor_velocity[i];
