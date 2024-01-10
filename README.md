@@ -55,18 +55,25 @@ Note2: 0 = Disable, 1 = Enable
 
 A message broadcast from MCU about every 20ms, below is the sequence of the message.
 
-* 0xAA Pattern
-* The length of the package in bytes (int), including 0xAA Pattern and data
-* Target Wheels Velocity (4 * float)
-* Measured Wheels Velocity (4 * float)
-* P Constant (4 * float)
-* I Constant (4 * float)
-* D Constant (4 * float)
-* Battery Voltage (2 * int) (The chassis has 2 power source, first is moter, second is for computer)
-* Software E-Stop Enabled (int) (N1)
-* Hardware E-Stop Enabled (int) (N1) (Software E-Stop can triggers this because of circuit design)
+| Description                | Type  | Member                         | Size (bytes) |
+|----------------------------|-------|--------------------------------|--------------|
+| 0xAA Pattern               | char  | Only 1                         | 1            |
+| Package Total Size         | int   | Only 1                         | 4            |
+| Target Wheels Velocity     | int   | wheel1, wheel2, wheel3, wheel4 | 16           |
+| Measured Wheels Velocity   | int   | wheel1, wheel2, wheel3, wheel4 | 16           |
+| Measured Forward Kinematic (Have not implemented)| float | x vel, y vel, w vel            | 12           |
+| P Constant                 | float | wheel1, wheel2, wheel3, wheel4 | 16           |
+| I Constant                 | float | wheel1, wheel2, wheel3, wheel4 | 16           |
+| D Constant                 | float | wheel1, wheel2, wheel3, wheel4 | 16           |
+| Battery Voltage            | float | Battery 1, Battery 2 (N1)      | 8            |
+| Software E-Stop Enabled    | float | Only 1 (N2)                    | 4            |
+| Hardware E-Stop Enabled    | float | Only 1 (N3)                    | 4            |
 
-Note1: 0 = Disable, 1 = Enable
+Note1: he chassis has 2 power source, Battery 1 is moter, Battery 2 is for computer
+
+Note2: 0 = Disable, 1 = Enable
+
+Note3: Software E-Stop can triggers this because of circuit design
 
 # Getting started
 
