@@ -46,6 +46,7 @@ This project assumes char is 1 byte; int and float are 4 bytes.
 | Single Motor Velocity    | V              | Motor Number (int) (N1) | Velocity (float)   |                    |                    |
 | Motor PID                | P              | Motor Number (int) (N1) | P Constant (float) | I Constant (float) | D Constant (float) |
 | Software E-Stop          | E              | Enable (int) (N2)       |                    |                    |                    |
+| Reset Odometry (Pending) | O              |                         |                    |                    |                    |
 
 Note1: Motor number starting from 0
 
