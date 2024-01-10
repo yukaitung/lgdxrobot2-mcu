@@ -33,7 +33,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define TIMER2_COUNT_MAX 20
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -49,6 +48,7 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim5;
+TIM_HandleTypeDef htim9;
 
 /* USER CODE BEGIN PV */
 // INA219
@@ -74,6 +74,7 @@ static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_TIM5_Init(void);
+static void MX_TIM9_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -165,28 +166,21 @@ void HAL_I2C_MasterRxCpltCallback (I2C_HandleTypeDef *hi2c)
 	if(hi2c->Instance == hi2c1.Instance) 
 	{
 		ina219VoltageValue[currentIna219] = (ina219VoltageData[0] << 8 | ina219VoltageData[1]) >> 3;
-		if(ina219VoltageValue[actuator_battery] < 2000) // Lower than 8V which lower than 4 * 18650 lowest vlotage (2 * 4)
+		if(ina219VoltageValue[actuator_battery] < 3000) // Lower than 12V
 			MOTOR_Set_Hardware_E_Stop(1);
 		else
 			MOTOR_Set_Hardware_E_Stop(0);
-		currentIna219 = currentIna219 == actuator_battery ? logic_battery : actuator_battery;
+		currentIna219 = (currentIna219 == actuator_battery ? logic_battery : actuator_battery);
 	}
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	static int tim2_count = 0; 
-	if(htim->Instance == htim2.Instance)
+	if(htim->Instance == htim9.Instance)
 	{
-		// About 10ms
-		tim2_count++;
-		if(tim2_count >= TIMER2_COUNT_MAX)
-		{
-			tim2_count = 0;
-			MOTOR_PID();
-			Broadcast_Status();
-			Update_Ina219();
-		}
+		MOTOR_PID();
+		Broadcast_Status();
+		Update_Ina219();
 	}
 }
 
@@ -227,9 +221,10 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM5_Init();
   MX_USB_DEVICE_Init();
+  MX_TIM9_Init();
   /* USER CODE BEGIN 2 */
 	MOTOR_Init(&htim2, &htim1, &htim3, &htim4, &htim5);
-	HAL_TIM_Base_Start_IT(&htim2);
+	HAL_TIM_Base_Start_IT(&htim9);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -587,6 +582,44 @@ static void MX_TIM5_Init(void)
   /* USER CODE BEGIN TIM5_Init 2 */
 
   /* USER CODE END TIM5_Init 2 */
+
+}
+
+/**
+  * @brief TIM9 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM9_Init(void)
+{
+
+  /* USER CODE BEGIN TIM9_Init 0 */
+
+  /* USER CODE END TIM9_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+
+  /* USER CODE BEGIN TIM9_Init 1 */
+
+  /* USER CODE END TIM9_Init 1 */
+  htim9.Instance = TIM9;
+  htim9.Init.Prescaler = 23;
+  htim9.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim9.Init.Period = 59999;
+  htim9.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim9.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim9) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim9, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM9_Init 2 */
+
+  /* USER CODE END TIM9_Init 2 */
 
 }
 

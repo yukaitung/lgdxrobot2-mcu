@@ -14,6 +14,8 @@ float motor_min_step[WHEEL_COUNT] = {0.0001520576675, 0.0001586688704, 0.0001542
 float motor_kp[WHEEL_COUNT] = {6, 3, 6.5, 7};
 float motor_ki[WHEEL_COUNT] = {0.8, 0.8, 0.8, 0.85};
 float motor_kd[WHEEL_COUNT] = {2, 3, 1, 0.5};
+
+// PID
 float pid_accumulate_error[WHEEL_COUNT] = {0, 0, 0, 0};
 float pid_last_error[WHEEL_COUNT] = {0, 0, 0, 0};
 
@@ -297,12 +299,12 @@ void MOTOR_PID()
 		if(i % 2 == 0)
 		{
 			// Motor 0, 2
-			motor_velocity[i] = (safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], ENCODER_LIMIT) * ENCODER_MIN_ANGULAR) * TIME_FACTOR;
+			motor_velocity[i] = (safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], ENCODER_LIMIT) * ENCODER_MIN_ANGULAR) * PID_MS_TO_S;
 		}
 		else
 		{
 			// Motor 1, 3
-			motor_velocity[i] = (-1 * safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], ENCODER_LIMIT) * ENCODER_MIN_ANGULAR) * TIME_FACTOR;
+			motor_velocity[i] = (-1 * safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], ENCODER_LIMIT) * ENCODER_MIN_ANGULAR) * PID_MS_TO_S;
 		}
 		if(motor_velocity[i] > motor_max_speed[i] || motor_velocity[i] < -motor_max_speed[i])
 			motor_velocity[i] = motor_last_velocity[i];
