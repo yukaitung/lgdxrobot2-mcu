@@ -55,19 +55,21 @@ Note2: 0 = Disable, 1 = Enable
 
 A message broadcast from MCU about every 20ms, below is the sequence of the message.
 
-| Description                | Type  | Member                         | Size (bytes) |
-|----------------------------|-------|--------------------------------|--------------|
-| 0xAA Pattern               | char  | Only 1                         | 1            |
-| Package Total Size         | int   | Only 1                         | 4            |
-| Target Wheels Velocity     | int   | wheel1, wheel2, wheel3, wheel4 | 16           |
-| Measured Wheels Velocity   | int   | wheel1, wheel2, wheel3, wheel4 | 16           |
-| Measured Forward Kinematic (Have not implemented)| float | x vel, y vel, w vel            | 12           |
-| P Constant                 | float | wheel1, wheel2, wheel3, wheel4 | 16           |
-| I Constant                 | float | wheel1, wheel2, wheel3, wheel4 | 16           |
-| D Constant                 | float | wheel1, wheel2, wheel3, wheel4 | 16           |
-| Battery Voltage            | float | Battery 1, Battery 2 (N1)      | 8            |
-| Software E-Stop Enabled    | float | Only 1 (N2)                    | 4            |
-| Hardware E-Stop Enabled    | float | Only 1 (N3)                    | 4            |
+| Description              | Type  | Member                         | Size (bytes) |
+|--------------------------|-------|--------------------------------|--------------|
+| 0xAA Pattern             | char  |                                | 1            |
+| Frame Total Size         | int   |                                | 4            |
+| Target Wheels Velocity   | int   | wheel1, wheel2, wheel3, wheel4 | 16           |
+| Measured Wheels Velocity | int   | wheel1, wheel2, wheel3, wheel4 | 16           |
+| Transform (Pending)               | float | x, y, w                        | 12           |
+| Forward Kinematic (Pending)       | float | x vel, y vel, w vel            | 12           |
+| Chassis Config (Pending)          | float | lx, ly, wheel radius           | 12           |
+| P Constant               | float | wheel1, wheel2, wheel3, wheel4 | 16           |
+| I Constant               | float | wheel1, wheel2, wheel3, wheel4 | 16           |
+| D Constant               | float | wheel1, wheel2, wheel3, wheel4 | 16           |
+| Battery Voltage          | float | Battery 1, Battery 2 (N1)      | 8            |
+| Software E-Stop Enabled  | float | (N2)                           | 4            |
+| Hardware E-Stop Enabled  | float | (N3)                           | 4            |
 
 Note1: he chassis has 2 power source, Battery 1 is moter, Battery 2 is for computer
 
