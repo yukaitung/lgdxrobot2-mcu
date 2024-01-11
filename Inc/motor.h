@@ -16,9 +16,9 @@
 #define ENCODER_MIN_ANGULAR 0.00158666296 // 2pi / (3960)
 
 // Constants - PID Configuration
-#define PID_KP float motor_kp[WHEEL_COUNT] = {6, 3, 6.5, 7};
-#define PID_KI float motor_ki[WHEEL_COUNT] = {0.8, 0.8, 0.8, 0.85};
-#define PID_KD float motor_kd[WHEEL_COUNT] = {2, 3, 1, 0.5};
+#define PID_KP float motor_kp[WHEEL_COUNT] = {11.5, 2.2, 8.0, 10};
+#define PID_KI float motor_ki[WHEEL_COUNT] = {1.1, 0.8, 0.9, 1.0};
+#define PID_KD float motor_kd[WHEEL_COUNT] = {1, 2, 1, 1};
 
 //
 // Function

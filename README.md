@@ -102,9 +102,9 @@ This section explains the decision for some values.
 
 ### PWM Gwnwration
 
-The PWM is to control the speed for every motors. The system clock is 92MHz and PWM frequency is 3kHz, which is suitable for cheap brush DC motor. 
+The PWM is to control the speed for every motors. The system clock is 92MHz and PWM frequency is 10kHz. 
 
-The ARR is 31999, from formula: Fpwm = (Fclk / (ARR + 1) * (PSC + 1))
+The ARR is 9599, from formula: Fpwm = (Fclk / (ARR + 1) * (PSC + 1))
 
 ### Wheel & Encoder
 
