@@ -320,6 +320,14 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 			enable = Combine_Byte((uint8_t) Buf[1], (uint8_t) Buf[2], (uint8_t) Buf[3], (uint8_t) Buf[4]);
 			MOTOR_Set_Software_E_Stop(enable);
 			break;
+			case 'O':
+			/*
+			 * Reset transform, the length is 1 byte
+			 */
+			if (*Len != 1)
+				break;
+			MOTOR_Reset_Transform();
+			break;
 	}
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);

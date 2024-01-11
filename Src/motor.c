@@ -3,33 +3,22 @@
 #include "motor.h"
 #include "main.h"
 
-// Private Define
-#define ENCODER_LIMIT 65536
+// Constant from motor.h
+MOTOR_MAX_SPEED
+PID_KP
+PID_KI
+PID_KD
 
-// Edit
-float motor_max_speed[WHEEL_COUNT] = {10.948, 11.424, 11.1066, 10.6306}; // By testing
-float motor_min_step[WHEEL_COUNT] = {0.0001520576675, 0.0001586688704, 0.0001542604758, 0.0001476492729}; // MOTOR_MAX_SPEED / MAX_PWM_CCR
-
-// Edit: PID
-float motor_kp[WHEEL_COUNT] = {6, 3, 6.5, 7};
-float motor_ki[WHEEL_COUNT] = {0.8, 0.8, 0.8, 0.85};
-float motor_kd[WHEEL_COUNT] = {2, 3, 1, 0.5};
-
-// PID
 float pid_accumulate_error[WHEEL_COUNT] = {0, 0, 0, 0};
 float pid_last_error[WHEEL_COUNT] = {0, 0, 0, 0};
-
-// Motor
 float motor_velocity[WHEEL_COUNT] = {0, 0, 0, 0};
 float motor_last_velocity[WHEEL_COUNT] = {0, 0, 0, 0}; // Discard anomaly in encoder
 float motor_target_velocity[WHEEL_COUNT] = {0, 0, 0, 0};
-int motor_pwm[WHEEL_COUNT] = {0, 0, 0, 0};
-
-// Encoder
 uint16_t encoder_value[WHEEL_COUNT] = {0, 0, 0, 0};
 uint16_t encoder_last_value[WHEEL_COUNT] = {0, 0, 0, 0};
+float motor_transform[3] = {0, 0, 0};
+float motor_forward_kinematic[3] = {0, 0, 0};
 
-// E-Stop
 enum __e_Stop {
   software_estop,
   hardware_estop,
@@ -37,7 +26,6 @@ enum __e_Stop {
 } E_stop;
 int e_stop_enabled[estop_count] = {0, 0};
 
-// Private Variables
 TIM_HandleTypeDef *m_pwm_htim;
 TIM_HandleTypeDef *motor_htim[WHEEL_COUNT];
 
@@ -47,6 +35,7 @@ TIM_HandleTypeDef *motor_htim[WHEEL_COUNT];
 
 int safe_unsigned_subtract(int a, int b, int limit)
 {
+	limit++;
 	// assume limit = 65536
 	// 0 - 65535
 	if(a < b && b - a > limit)
@@ -59,16 +48,13 @@ int safe_unsigned_subtract(int a, int b, int limit)
 
 void MOTOR_Set_Pwm(int motor, int CCR)
 {
-	motor_pwm[motor] = CCR;
-	if(CCR > MAX_PWM_CCR)
+	if(CCR > m_pwm_htim->Init.Period)
 	{
-		CCR = MAX_PWM_CCR;
-		motor_pwm[motor] = MAX_PWM_CCR;
+		CCR = m_pwm_htim->Init.Period;
 	}
 	else if(CCR < 0)
 	{
 		CCR = 0;
-		motor_pwm[motor] = 0;
 	}
 	switch(motor)
 	{
@@ -175,6 +161,16 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *m1_htim, TIM_Han
 	MOTOR_Set_Power(true);
 }
 
+float MOTOR_Get_Transform(int axis)
+{
+	return motor_transform[axis];
+}
+
+float MOTOR_Get_Fk(int axis)
+{
+	return motor_forward_kinematic[axis];
+}
+
 float MOTOR_Get_Velocity(int motor)
 {
 	return motor_velocity[motor];
@@ -197,11 +193,6 @@ float MOTOR_Get_PID(int pid, int motor)
 			return motor_kd[motor];
 	}
 	return -1;
-}
-
-int MOTOR_Get_PWM(int motor)
-{
-	return motor_pwm[motor];
 }
 
 int MOTOR_Get_E_Stop_Status(int status)
@@ -290,8 +281,16 @@ void MOTOR_Set_Hardware_E_Stop(int enable)
 	}
 }
 
+void MOTOR_Reset_Transform()
+{
+	for(int i = 0; i < 3; i++)
+		motor_transform[i] = 0;
+}
+
 void MOTOR_PID()
 {
+	// PID calculation
+	int newPwm[WHEEL_COUNT] = {0, 0, 0, 0};
 	for(int i = 0; i < WHEEL_COUNT; i++)
 	{
 		encoder_value[i] = __HAL_TIM_GET_COUNTER(motor_htim[i]);
@@ -299,16 +298,17 @@ void MOTOR_PID()
 		if(i % 2 == 0)
 		{
 			// Motor 0, 2
-			motor_velocity[i] = (safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], ENCODER_LIMIT) * ENCODER_MIN_ANGULAR) * PID_MS_TO_S;
+			motor_velocity[i] = (safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], motor_htim[i]->Init.Period) * ENCODER_MIN_ANGULAR) * PID_MS_TO_S;
 		}
 		else
 		{
 			// Motor 1, 3
-			motor_velocity[i] = (-1 * safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], ENCODER_LIMIT) * ENCODER_MIN_ANGULAR) * PID_MS_TO_S;
+			motor_velocity[i] = (-1 * safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], motor_htim[i]->Init.Period) * ENCODER_MIN_ANGULAR) * PID_MS_TO_S;
 		}
+		// Discard anomaly in encoder
 		if(motor_velocity[i] > motor_max_speed[i] || motor_velocity[i] < -motor_max_speed[i])
 			motor_velocity[i] = motor_last_velocity[i];
-
+		
 		// Calculate error 
 		float error = fabs(motor_target_velocity[i]) - fabs(motor_velocity[i]);
 		pid_accumulate_error[i] += error;
@@ -319,23 +319,27 @@ void MOTOR_PID()
 			pid_accumulate_error[i] = -motor_max_speed[i];
 		float error_rate = error - fabs(pid_last_error[i]);
 		
-		// Apply PID
-		int pid = roundf((motor_kp[i] * error + motor_ki[i] * pid_accumulate_error[i] + motor_kd[i] * error_rate) / motor_min_step[i]);
-		if(motor_target_velocity[i] != 0) 
-		{
-			if(pid >= 0) 
-			{
-				MOTOR_Set_Pwm(i, pid);
-			}
-			else 
-			{
-				// Decrease speed for -ve error
-				MOTOR_Set_Pwm(i, 0);
-			}
-		}
+		// Get PID
+		int pid = roundf((motor_kp[i] * error + motor_ki[i] * pid_accumulate_error[i] + motor_kd[i] * error_rate) / (motor_max_speed[i] / m_pwm_htim->Init.Period));
+		newPwm[i] = ((pid > 0 && motor_target_velocity[i] != 0) ? pid : 0);
 
 		pid_last_error[i] = error;
 		encoder_last_value[i] = encoder_value[i];
 		motor_last_velocity[i] = motor_velocity[i];
 	}
+	
+	// Apply PID
+	for(int i = 0; i < WHEEL_COUNT; i++)
+	{
+		MOTOR_Set_Pwm(i, newPwm[i]);
+	}
+	
+	// Odometry information
+	motor_forward_kinematic[0] = (motor_velocity[0] + motor_velocity[1] + motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4 / PID_MS_TO_S);
+	motor_forward_kinematic[1] = (-motor_velocity[0] + motor_velocity[1] + motor_velocity[2] - motor_velocity[3]) * (WHEEL_RADIUS / 4 / PID_MS_TO_S);
+	motor_forward_kinematic[2] = (-motor_velocity[0] + motor_velocity[1] - motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4 / PID_MS_TO_S);
+
+	motor_transform[0] += motor_forward_kinematic[0];
+	motor_transform[1] += motor_forward_kinematic[1];
+	motor_transform[2] += motor_forward_kinematic[2];
 }

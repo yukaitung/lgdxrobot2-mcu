@@ -4,26 +4,34 @@
 #include "stm32f4xx_hal.h"
 #include <stdbool.h>
 
-// Constants
-#define MAX_PWM_CCR 71999
-
 // Constants - Chassis Configuration
 #define CHASSIS_LX 0.237
 #define CHASSIS_LY 0.287
 #define WHEEL_RADIUS 0.0375
 #define WHEEL_COUNT 4
 #define MOTOR_GEAR_RATIO 90
+#define MOTOR_MAX_SPEED float motor_max_speed[WHEEL_COUNT] = {10.948, 11.424, 11.1066, 10.6306}; // By testing
+
 // Constants - Pre-Calculation
 #define ENCODER_MIN_ANGULAR 0.00158666296 // 2pi / (3960)
 
 // Constants - PID Configuration
 #define PID_RESPONSE_TIME_MS 20 // ms
 #define PID_MS_TO_S 50 // 20ms * PID_MS_TO_S = 1s
+#define PID_KP float motor_kp[WHEEL_COUNT] = {6, 3, 6.5, 7};
+#define PID_KI float motor_ki[WHEEL_COUNT] = {0.8, 0.8, 0.8, 0.85};
+#define PID_KD float motor_kd[WHEEL_COUNT] = {2, 3, 1, 0.5};
+
+//
+// Function
+//
 
 // Constructor
 void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *m1_htim, TIM_HandleTypeDef *m2_htim, TIM_HandleTypeDef *m3_htim, TIM_HandleTypeDef *m4_htim);
 
 // Get
+float MOTOR_Get_Transform(int axis);
+float MOTOR_Get_Fk(int axis);
 float MOTOR_Get_Velocity(int motor);
 float MOTOR_Get_Target_Velocity(int motor);
 float MOTOR_Get_PID(int pid, int motor);
@@ -36,6 +44,7 @@ void MOTOR_Set_Single_Velocity(int motor, float velocity);
 void MOTOR_Set_PID(int motor, float kp, float ki, float kd);
 void MOTOR_Set_Software_E_Stop(int enable);
 void MOTOR_Set_Hardware_E_Stop(int enable);
+void MOTOR_Reset_Transform();
 
 // Functions
 void MOTOR_PID();

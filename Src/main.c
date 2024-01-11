@@ -86,62 +86,66 @@ uint32_t Float_To_Uint32(float n)
     return (uint32_t)(*(uint32_t*)&n);
 }
 
+void Write_Uint32(uint32_t value, uint8_t *msb, uint8_t *byte2, uint8_t *byte3, uint8_t *lsb)
+{
+	*msb = (value & 4278190080) >> 24;
+	*byte2 = (value & 16711680) >> 16;
+	*byte3 = (value & 65280) >> 8;
+	*lsb = value & 255;
+}
+
 void Broadcast_Status()
 {
 	static uint8_t msg[128] = {'\0'};
-	static int index = 0;
-	static uint32_t temp = 0;
+	int index = 2;
 	msg[0] = 0xAA;
-	index = 5;
-	for(int i = 0; i < WHEEL_COUNT; i++)
+	for(int i = 0; i < 3; i++)
 	{
-		temp = Float_To_Uint32(MOTOR_Get_Target_Velocity(i));
-		msg[index++] = (temp & 4278190080) >> 24;
-		msg[index++] = (temp & 16711680) >> 16;
-		msg[index++] = (temp & 65280) >> 8;
-		msg[index++] = temp & 255;
+		uint32_t temp = Float_To_Uint32(MOTOR_Get_Transform(i));
+		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
+		index += 4;
+	}
+	for(int i = 0; i < 3; i++)
+	{
+		uint32_t temp = Float_To_Uint32(MOTOR_Get_Fk(i));
+		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
+		index += 4;
 	}
 	for(int i = 0; i < WHEEL_COUNT; i++)
 	{
-		temp = Float_To_Uint32(MOTOR_Get_Velocity(i));
-		msg[index++] = (temp & 4278190080) >> 24;
-		msg[index++] = (temp & 16711680) >> 16;
-		msg[index++] = (temp & 65280) >> 8;
-		msg[index++] = temp & 255;
+		uint32_t temp = Float_To_Uint32(MOTOR_Get_Target_Velocity(i));
+		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
+		index += 4;
+	}
+	for(int i = 0; i < WHEEL_COUNT; i++)
+	{
+		uint32_t temp = Float_To_Uint32(MOTOR_Get_Velocity(i));
+		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
+		index += 4;
 	}
 	for(int i = 0; i < 3; i++)
 	{
 		for(int j = 0; j < WHEEL_COUNT; j++)
 		{
-			temp = Float_To_Uint32(MOTOR_Get_PID(i, j));
-			msg[index++] = (temp & 4278190080) >> 24;
-			msg[index++] = (temp & 16711680) >> 16;
-			msg[index++] = (temp & 65280) >> 8;
-			msg[index++] = temp & 255;
+			uint32_t temp = Float_To_Uint32(MOTOR_Get_PID(i, j));
+			Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
+			index += 4;
 		}
 	}
 	for(int i = 0; i < 2; i++)
 	{
-		temp = ina219VoltageValue[i];
-		msg[index++] = (temp & 4278190080) >> 24;
-		msg[index++] = (temp & 16711680) >> 16;
-		msg[index++] = (temp & 65280) >> 8;
-		msg[index++] = temp & 255;
+		uint32_t temp = ina219VoltageValue[i];
+		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
+		index += 4;
 	}
 	for(int i = 0; i < 2; i++)
 	{
-		temp = MOTOR_Get_E_Stop_Status(i);
-		msg[index++] = (temp & 4278190080) >> 24;
-		msg[index++] = (temp & 16711680) >> 16;
-		msg[index++] = (temp & 65280) >> 8;
-		msg[index++] = temp & 255;
+		uint32_t temp = MOTOR_Get_E_Stop_Status(i);
+		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
+		index += 4;
 	}
 	// Final: Size
-	temp = index;
-	msg[1] = (temp & 4278190080) >> 24;
-	msg[2] = (temp & 16711680) >> 16;
-	msg[3] = (temp & 65280) >> 8;
-	msg[4] = temp & 255;
+	msg[1] = index;
 	CDC_Transmit_FS(msg, index);
 }
 
@@ -260,9 +264,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 25;
-  RCC_OscInitStruct.PLL.PLLN = 144;
+  RCC_OscInitStruct.PLL.PLLN = 192;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 3;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -277,7 +281,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
   {
     Error_Handler();
   }
@@ -389,7 +393,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 71999;
+  htim2.Init.Period = 95999;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -603,9 +607,9 @@ static void MX_TIM9_Init(void)
 
   /* USER CODE END TIM9_Init 1 */
   htim9.Instance = TIM9;
-  htim9.Init.Prescaler = 23;
+  htim9.Init.Prescaler = 191;
   htim9.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim9.Init.Period = 59999;
+  htim9.Init.Period = 49999;
   htim9.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim9.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim9) != HAL_OK)
