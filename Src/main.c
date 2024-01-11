@@ -61,7 +61,7 @@ int currentIna219 = 0;
 const uint16_t ina219Addr[battery_count] = {0x80, 0x82};
 uint8_t ina219VoltageRegister[1] = {0x02};
 uint8_t ina219VoltageData[battery_count] = {0x00, 0x00};
-uint32_t ina219VoltageValue[battery_count] = {0, 0};
+uint16_t ina219VoltageValue[battery_count] = {0, 0};
 
 /* USER CODE END PV */
 
@@ -134,16 +134,17 @@ void Broadcast_Status()
 	}
 	for(int i = 0; i < 2; i++)
 	{
-		uint32_t temp = ina219VoltageValue[i];
-		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
-		index += 4;
+		msg[index++] = (ina219VoltageValue[i] & 65280) >> 8;
+		msg[index++] = ina219VoltageValue[i] & 255;
 	}
+	msg[index] = 0;
 	for(int i = 0; i < 2; i++)
 	{
-		uint32_t temp = MOTOR_Get_E_Stop_Status(i);
-		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
-		index += 4;
+		bool temp = MOTOR_Get_E_Stop_Status(i);
+		if(temp)
+			msg[index] |= 1 << (7 - i);
 	}
+	index++;
 	// Final: Size
 	msg[1] = index;
 	CDC_Transmit_FS(msg, index);
@@ -166,7 +167,7 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
 
 void HAL_I2C_MasterRxCpltCallback (I2C_HandleTypeDef *hi2c)
 {
-  // Receive Data From INA219
+  // Received Data From INA219
 	if(hi2c->Instance == hi2c1.Instance) 
 	{
 		ina219VoltageValue[currentIna219] = (ina219VoltageData[0] << 8 | ina219VoltageData[1]) >> 3;

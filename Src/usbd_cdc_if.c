@@ -318,9 +318,9 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 			if (*Len != 5)
 				break;
 			enable = Combine_Byte((uint8_t) Buf[1], (uint8_t) Buf[2], (uint8_t) Buf[3], (uint8_t) Buf[4]);
-			MOTOR_Set_Software_E_Stop(enable);
+			MOTOR_Set_Software_E_Stop(enable != 0);
 			break;
-			case 'O':
+			case 'T':
 			/*
 			 * Reset transform, the length is 1 byte
 			 */

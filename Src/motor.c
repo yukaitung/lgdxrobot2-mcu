@@ -24,7 +24,7 @@ enum __e_Stop {
   hardware_estop,
 	estop_count
 } E_stop;
-int e_stop_enabled[estop_count] = {0, 0};
+bool e_stop_enabled[estop_count] = {false, false};
 
 TIM_HandleTypeDef *m_pwm_htim;
 TIM_HandleTypeDef *motor_htim[WHEEL_COUNT];
@@ -132,7 +132,7 @@ void MOTOR_Reset_LED()
 {
 	for(int i = 0; i < estop_count; i++)
 	{
-		if(e_stop_enabled[i] == 1)
+		if(e_stop_enabled[i])
 			return;
 	}
 	HAL_GPIO_WritePin(L_GREEN_GPIO_Port, L_GREEN_Pin, GPIO_PIN_SET);
@@ -195,9 +195,9 @@ float MOTOR_Get_PID(int pid, int motor)
 	return -1;
 }
 
-int MOTOR_Get_E_Stop_Status(int status)
+bool MOTOR_Get_E_Stop_Status(int e_stop)
 {
-	return e_stop_enabled[status];
+	return e_stop_enabled[e_stop];
 }
 
 void MOTOR_Set_Power(bool enable)
@@ -247,36 +247,36 @@ void MOTOR_Set_PID(int motor, float kp, float ki, float kd)
 	motor_kd[motor] = kd;
 }
 
-void MOTOR_Set_Software_E_Stop(int enable)
+void MOTOR_Set_Software_E_Stop(bool enable)
 {
-	if(enable == 1)
+	if(enable)
 	{
 		HAL_GPIO_WritePin(BT1_SW_GPIO_Port, BT1_SW_Pin, GPIO_PIN_RESET);
 		HAL_GPIO_WritePin(L_RED_GPIO_Port, L_RED_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(L_GREEN_GPIO_Port, L_GREEN_Pin, GPIO_PIN_RESET);
-		e_stop_enabled[software_estop] = 1;
+		e_stop_enabled[software_estop] = true;
 		MOTOR_Set_Ik(0, 0, 0);
 	}
 	else 
 	{
 		HAL_GPIO_WritePin(BT1_SW_GPIO_Port, BT1_SW_Pin, GPIO_PIN_SET);
-		e_stop_enabled[software_estop] = 0;
+		e_stop_enabled[software_estop] = false;
 		MOTOR_Reset_LED();
 	}
 }
 
-void MOTOR_Set_Hardware_E_Stop(int enable)
+void MOTOR_Set_Hardware_E_Stop(bool enable)
 {
-	if(enable == 1)
+	if(enable)
 	{
 		HAL_GPIO_WritePin(L_RED_GPIO_Port, L_RED_Pin, GPIO_PIN_SET);
 		HAL_GPIO_WritePin(L_GREEN_GPIO_Port, L_GREEN_Pin, GPIO_PIN_RESET);
-		e_stop_enabled[hardware_estop] = 1;
+		e_stop_enabled[hardware_estop] = true;
 		MOTOR_Set_Ik(0, 0, 0);
 	}
 	else 
 	{
-		e_stop_enabled[hardware_estop] = 0;
+		e_stop_enabled[hardware_estop] = false;
 		MOTOR_Reset_LED();
 	}
 }

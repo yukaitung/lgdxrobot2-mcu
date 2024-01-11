@@ -35,15 +35,15 @@ float MOTOR_Get_Fk(int axis);
 float MOTOR_Get_Velocity(int motor);
 float MOTOR_Get_Target_Velocity(int motor);
 float MOTOR_Get_PID(int pid, int motor);
-int MOTOR_Get_E_Stop_Status(int status);
+bool MOTOR_Get_E_Stop_Status(int e_stop);
 
 // Set
 void MOTOR_Set_Power(bool enable);
 void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w);
 void MOTOR_Set_Single_Velocity(int motor, float velocity);
 void MOTOR_Set_PID(int motor, float kp, float ki, float kd);
-void MOTOR_Set_Software_E_Stop(int enable);
-void MOTOR_Set_Hardware_E_Stop(int enable);
+void MOTOR_Set_Software_E_Stop(bool enable);
+void MOTOR_Set_Hardware_E_Stop(bool enable);
 void MOTOR_Reset_Transform();
 
 // Functions
