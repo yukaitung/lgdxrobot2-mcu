@@ -97,8 +97,11 @@ void Write_Uint32(uint32_t value, uint8_t *msb, uint8_t *byte2, uint8_t *byte3, 
 void Broadcast_Status()
 {
 	static uint8_t msg[128] = {'\0'};
-	int index = 2;
 	msg[0] = 0xAA;
+	int index = 2;
+	uint32_t time = MOTOR_Get_PID_elapsed(); // 32 bit to 16 bit
+	msg[index++] = (time & 65280) >> 8;
+	msg[index++] = time & 255;
 	for(int i = 0; i < 3; i++)
 	{
 		uint32_t temp = Float_To_Uint32(MOTOR_Get_Transform(i));
@@ -394,7 +397,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 95999;
+  htim2.Init.Period = 31999;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)

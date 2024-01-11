@@ -16,8 +16,6 @@
 #define ENCODER_MIN_ANGULAR 0.00158666296 // 2pi / (3960)
 
 // Constants - PID Configuration
-#define PID_RESPONSE_TIME_MS 20 // ms
-#define PID_MS_TO_S 50 // 20ms * PID_MS_TO_S = 1s
 #define PID_KP float motor_kp[WHEEL_COUNT] = {6, 3, 6.5, 7};
 #define PID_KI float motor_ki[WHEEL_COUNT] = {0.8, 0.8, 0.8, 0.85};
 #define PID_KD float motor_kd[WHEEL_COUNT] = {2, 3, 1, 0.5};
@@ -35,6 +33,7 @@ float MOTOR_Get_Fk(int axis);
 float MOTOR_Get_Velocity(int motor);
 float MOTOR_Get_Target_Velocity(int motor);
 float MOTOR_Get_PID(int pid, int motor);
+uint32_t MOTOR_Get_PID_elapsed();
 bool MOTOR_Get_E_Stop_Status(int e_stop);
 
 // Set

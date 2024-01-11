@@ -9,6 +9,8 @@ PID_KP
 PID_KI
 PID_KD
 
+uint32_t pid_last_tick = 0;
+uint32_t pid_elapsed = 0;
 float pid_accumulate_error[WHEEL_COUNT] = {0, 0, 0, 0};
 float pid_last_error[WHEEL_COUNT] = {0, 0, 0, 0};
 float motor_velocity[WHEEL_COUNT] = {0, 0, 0, 0};
@@ -157,6 +159,7 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *m1_htim, TIM_Han
 	for(int i = 0; i < WHEEL_COUNT; i++)
 	{
 		HAL_TIM_Encoder_Start(motor_htim[i], TIM_CHANNEL_ALL);
+		pid_last_tick = HAL_GetTick();
 	}
 	MOTOR_Set_Power(true);
 }
@@ -247,6 +250,11 @@ void MOTOR_Set_PID(int motor, float kp, float ki, float kd)
 	motor_kd[motor] = kd;
 }
 
+uint32_t MOTOR_Get_PID_elapsed()
+{
+	return pid_elapsed;
+}
+
 void MOTOR_Set_Software_E_Stop(bool enable)
 {
 	if(enable)
@@ -289,21 +297,28 @@ void MOTOR_Reset_Transform()
 
 void MOTOR_PID()
 {
+	// Time elapsed
+	uint32_t currentTick = HAL_GetTick();
+	pid_elapsed = currentTick - pid_last_tick;
+	float scaleToS = 1000 / pid_elapsed;
+	pid_last_tick = currentTick;
+	
 	// PID calculation
 	int newPwm[WHEEL_COUNT] = {0, 0, 0, 0};
 	for(int i = 0; i < WHEEL_COUNT; i++)
 	{
 		encoder_value[i] = __HAL_TIM_GET_COUNTER(motor_htim[i]);
+
 		
 		if(i % 2 == 0)
 		{
 			// Motor 0, 2
-			motor_velocity[i] = (safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], motor_htim[i]->Init.Period) * ENCODER_MIN_ANGULAR) * PID_MS_TO_S;
+			motor_velocity[i] = (safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], motor_htim[i]->Init.Period) * ENCODER_MIN_ANGULAR) * scaleToS;
 		}
 		else
 		{
 			// Motor 1, 3
-			motor_velocity[i] = (-1 * safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], motor_htim[i]->Init.Period) * ENCODER_MIN_ANGULAR) * PID_MS_TO_S;
+			motor_velocity[i] = (-1 * safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], motor_htim[i]->Init.Period) * ENCODER_MIN_ANGULAR) * scaleToS;
 		}
 		// Discard anomaly in encoder
 		if(motor_velocity[i] > motor_max_speed[i] || motor_velocity[i] < -motor_max_speed[i])
@@ -335,9 +350,9 @@ void MOTOR_PID()
 	}
 	
 	// Odometry information
-	motor_forward_kinematic[0] = (motor_velocity[0] + motor_velocity[1] + motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4 / PID_MS_TO_S);
-	motor_forward_kinematic[1] = (-motor_velocity[0] + motor_velocity[1] + motor_velocity[2] - motor_velocity[3]) * (WHEEL_RADIUS / 4 / PID_MS_TO_S);
-	motor_forward_kinematic[2] = (-motor_velocity[0] + motor_velocity[1] - motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4 / PID_MS_TO_S);
+	motor_forward_kinematic[0] = (motor_velocity[0] + motor_velocity[1] + motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4 / scaleToS);
+	motor_forward_kinematic[1] = (-motor_velocity[0] + motor_velocity[1] + motor_velocity[2] - motor_velocity[3]) * (WHEEL_RADIUS / 4 / scaleToS);
+	motor_forward_kinematic[2] = (-motor_velocity[0] + motor_velocity[1] - motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4 / scaleToS);
 
 	motor_transform[0] += motor_forward_kinematic[0];
 	motor_transform[1] += motor_forward_kinematic[1];

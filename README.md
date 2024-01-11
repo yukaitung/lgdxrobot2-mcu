@@ -60,6 +60,7 @@ A message broadcast from MCU about every 20ms, below is the sequence of the mess
 |--------------------------|-------------------------------------------------|--------------|
 | 0xAA Pattern             | OxAA (char)                                     | 1            |
 | Frame Total Size         | Size (char)                                     | 1            |
+| Refresh Time ms          | Refresh Time ms (unsigned short)                | 2            |
 | Transform                | x, y, w (3 float)                               | 12           |
 | Forward Kinematic        | x velocity, y velocity, w velocity (3 float)    | 12           |
 | Target Wheels Velocity   | wheel1, wheel2, wheel3, wheel4 (4 float)        | 16           |
@@ -69,7 +70,7 @@ A message broadcast from MCU about every 20ms, below is the sequence of the mess
 | D Constant               | wheel1, wheel2, wheel3, wheel4 (4 float)        | 16           |
 | Battery Voltage          | Battery 1, Battery 2 (N1) (unsigned short)      | 4            |
 | E-Stop Enabled           | MSB Software bit (N2), Hardware bit (N3) (char) | 1            |
-|                          | Total                                           | 111          |
+|                          | Total                                           | 113          |
 
 Note1: he chassis has 2 power source, Battery 1 is moter, Battery 2 is for computer
 
@@ -101,9 +102,9 @@ This section explains the decision for some values.
 
 ### PWM Gwnwration
 
-The PWM is to control the speed for every motors. The system clock is 92MHz and PWM frequency is 1kHz. 
+The PWM is to control the speed for every motors. The system clock is 92MHz and PWM frequency is 3kHz, which is suitable for cheap brush DC motor. 
 
-The ARR is 95999, from formula: Fpwm = (Fclk / (ARR + 1) * (PSC + 1))
+The ARR is 31999, from formula: Fpwm = (Fclk / (ARR + 1) * (PSC + 1))
 
 ### Wheel & Encoder
 
