@@ -99,7 +99,7 @@ void Broadcast_Status()
 	static uint8_t msg[128] = {'\0'};
 	msg[0] = 0xAA;
 	int index = 2;
-	uint32_t time = MOTOR_Get_PID_elapsed(); // 32 bit to 16 bit
+	uint16_t time = MOTOR_Get_PID_elapsed(); // 32 bit to 16 bit
 	msg[index++] = (time & 65280) >> 8;
 	msg[index++] = time & 255;
 	for(int i = 0; i < 3; i++)
@@ -611,9 +611,9 @@ static void MX_TIM9_Init(void)
 
   /* USER CODE END TIM9_Init 1 */
   htim9.Instance = TIM9;
-  htim9.Init.Prescaler = 45;
+  htim9.Init.Prescaler = 15;
   htim9.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim9.Init.Period = 39999;
+  htim9.Init.Period = 59999;
   htim9.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim9.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim9) != HAL_OK)

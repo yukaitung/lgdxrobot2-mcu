@@ -300,7 +300,7 @@ void MOTOR_PID()
 	// Time elapsed
 	uint32_t currentTick = HAL_GetTick();
 	pid_elapsed = currentTick - pid_last_tick;
-	float scaleToS = 1000 / pid_elapsed;
+	float scaleToS = 1000.0 / (float) pid_elapsed;
 	pid_last_tick = currentTick;
 	
 	// PID calculation
@@ -309,7 +309,6 @@ void MOTOR_PID()
 	{
 		encoder_value[i] = __HAL_TIM_GET_COUNTER(motor_htim[i]);
 
-		
 		if(i % 2 == 0)
 		{
 			// Motor 0, 2
@@ -350,11 +349,10 @@ void MOTOR_PID()
 	}
 	
 	// Odometry information
-	motor_forward_kinematic[0] = (motor_velocity[0] + motor_velocity[1] + motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4 / scaleToS);
-	motor_forward_kinematic[1] = (-motor_velocity[0] + motor_velocity[1] + motor_velocity[2] - motor_velocity[3]) * (WHEEL_RADIUS / 4 / scaleToS);
-	motor_forward_kinematic[2] = (-motor_velocity[0] + motor_velocity[1] - motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4 / scaleToS);
-
-	motor_transform[0] += motor_forward_kinematic[0];
-	motor_transform[1] += motor_forward_kinematic[1];
-	motor_transform[2] += motor_forward_kinematic[2];
+	motor_forward_kinematic[0] = ((motor_velocity[0] + motor_velocity[1] + motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS;
+	motor_forward_kinematic[1] = ((-motor_velocity[0] + motor_velocity[1] + motor_velocity[2] - motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS;
+	motor_forward_kinematic[2] = ((-motor_velocity[0] + motor_velocity[1] - motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS;
+	motor_transform[0] = motor_transform[0] + motor_forward_kinematic[0];
+	motor_transform[1] = motor_transform[1] + motor_forward_kinematic[1];
+	motor_transform[2] = motor_transform[2] + motor_forward_kinematic[2];
 }
