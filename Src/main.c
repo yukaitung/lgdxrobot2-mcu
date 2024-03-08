@@ -174,7 +174,7 @@ void HAL_I2C_MasterRxCpltCallback (I2C_HandleTypeDef *hi2c)
 	if(hi2c->Instance == hi2c1.Instance) 
 	{
 		ina219VoltageValue[currentIna219] = (ina219VoltageData[0] << 8 | ina219VoltageData[1]) >> 3;
-		if(ina219VoltageValue[actuator_battery] < 2000) // Lower than 8V
+		if(ina219VoltageValue[actuator_battery] < 1500) // Lower than 6V
 			MOTOR_Set_Hardware_E_Stop(1);
 		else
 			MOTOR_Set_Hardware_E_Stop(0);

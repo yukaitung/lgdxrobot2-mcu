@@ -3,6 +3,8 @@
 #include "motor.h"
 #include "main.h"
 
+#define M_PI 3.14159265358979323846
+
 // Constant from motor.h
 MOTOR_MAX_SPEED
 PID_KP
@@ -351,7 +353,7 @@ void MOTOR_PID()
 	// Odometry information
 	motor_forward_kinematic[0] = ((motor_velocity[0] + motor_velocity[1] + motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS;
 	motor_forward_kinematic[1] = ((-motor_velocity[0] + motor_velocity[1] + motor_velocity[2] - motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS;
-	motor_forward_kinematic[2] = ((-motor_velocity[0] + motor_velocity[1] - motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / (2 * (CHASSIS_LX + CHASSIS_LY)))) / scaleToS;
+	motor_forward_kinematic[2] = ((-motor_velocity[0] + motor_velocity[1] - motor_velocity[2] + motor_velocity[3]) * ((WHEEL_RADIUS * 2) / (M_PI * (CHASSIS_LX + CHASSIS_LY)))) / scaleToS; // Just guessing
 	motor_transform[0] = motor_transform[0] + motor_forward_kinematic[0];
 	motor_transform[1] = motor_transform[1] + motor_forward_kinematic[1];
 	motor_transform[2] = motor_transform[2] + motor_forward_kinematic[2];
