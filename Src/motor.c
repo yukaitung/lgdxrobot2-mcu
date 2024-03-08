@@ -351,10 +351,10 @@ void MOTOR_PID()
 	}
 	
 	// Odometry information
-	motor_forward_kinematic[0] = (((motor_velocity[0] + motor_velocity[1] + motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS) * cos(motor_transform[2]);
-	motor_forward_kinematic[1] = (((-motor_velocity[0] + motor_velocity[1] + motor_velocity[2] - motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS) * cos(motor_transform[2]);
+	motor_forward_kinematic[0] = (((motor_velocity[0] + motor_velocity[1] + motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS);
+	motor_forward_kinematic[1] = (((-motor_velocity[0] + motor_velocity[1] + motor_velocity[2] - motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS);
 	motor_forward_kinematic[2] = ((-motor_velocity[0] + motor_velocity[1] - motor_velocity[2] + motor_velocity[3]) * ((WHEEL_RADIUS * 2) / (M_PI * (CHASSIS_LX + CHASSIS_LY)))) / scaleToS; // Just guessing to use PI for fk
-	motor_transform[0] = motor_transform[0] + motor_forward_kinematic[0];
-	motor_transform[1] = motor_transform[1] + motor_forward_kinematic[1];
+	motor_transform[0] += motor_forward_kinematic[0] * cos(motor_transform[2]) - motor_forward_kinematic[1] * sin(motor_transform[2]);
+	motor_transform[1] += motor_forward_kinematic[0] * sin(motor_transform[2]) - motor_forward_kinematic[1] * cos(motor_transform[2]);
 	motor_transform[2] = motor_transform[2] + motor_forward_kinematic[2];
 }
