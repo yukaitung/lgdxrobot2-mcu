@@ -40,17 +40,20 @@ This project assumes char is 1 byte; int and float are 4 bytes.
 
 #### Table Of Commands
 
-| Description              | Command (char) | Parameter 1             | Parameter 2        | Parameter 3        | Parameter 4        |
-|--------------------------|----------------|-------------------------|--------------------|--------------------|--------------------|
-| Motor Inverse Kinematics | M              | X Velocity (float)      | Y Velocity (float) | w Velocity (float) |                    |
-| Single Motor Velocity    | V              | Motor Number (int) (N1) | Velocity (float)   |                    |                    |
-| Motor PID                | P              | Motor Number (int) (N1) | P Constant (float) | I Constant (float) | D Constant (float) |
-| Software E-Stop          | E              | Enable (int) (N2)       |                    |                    |                    |
-| Reset Transform          | T              |                         |                    |                    |                    |
+| Description              | Command (char) | Parameter 1             | Parameter 2          | Parameter 3          | Parameter 4        |
+|--------------------------|----------------|-------------------------|----------------------|----------------------|--------------------|
+| Software E-Stop          | E              | Enable (int) (N2)       |                      |                      |                    |
+| External IMU Data (N3)   | I              | Accel X-axis (float)    | Accel X-axis (float) | Accel X-axis (float) | Gyro Z-axis        |
+| Motor Inverse Kinematics | M              | X Velocity (float)      | Y Velocity (float)   | w Velocity (float)   |                    |
+| Motor PID                | P              | Motor Number (int) (N1) | P Constant (float)   | I Constant (float)   | D Constant (float) |
+| Reset Transform          | T              |                         |                      |                      |                    |
+| Single Motor Velocity    | V              | Motor Number (int) (N1) | Velocity (float)     |                      |                    |
 
 Note1: Motor number starting from 0
 
 Note2: 0 = Disable, 1 = Enable
+
+Note3: Using ROS convention
 
 ### MCU to PC
 

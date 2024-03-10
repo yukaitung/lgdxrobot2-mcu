@@ -22,6 +22,8 @@ uint16_t encoder_value[WHEEL_COUNT] = {0, 0, 0, 0};
 uint16_t encoder_last_value[WHEEL_COUNT] = {0, 0, 0, 0};
 float motor_transform[3] = {0, 0, 0};
 float motor_forward_kinematic[3] = {0, 0, 0};
+bool using_external_imu = false;
+float accel_vector = 0;
 
 enum __e_Stop {
   software_estop,
@@ -297,6 +299,13 @@ void MOTOR_Reset_Transform()
 		motor_transform[i] = 0;
 }
 
+void MOTOR_Set_External_IMU(float ax, float ay, float az, float gz)
+{
+	using_external_imu = true;
+	accel_vector = sqrt(ax * ax + ay * ay + az * az);
+	motor_transform[2] += gz;
+}
+
 void MOTOR_PID()
 {
 	// Time elapsed
@@ -351,10 +360,18 @@ void MOTOR_PID()
 	}
 	
 	// Odometry information
-	motor_forward_kinematic[0] = (((motor_velocity[0] + motor_velocity[1] + motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS);
-	motor_forward_kinematic[1] = (((-motor_velocity[0] + motor_velocity[1] + motor_velocity[2] - motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS);
-	motor_forward_kinematic[2] = ((-motor_velocity[0] + motor_velocity[1] - motor_velocity[2] + motor_velocity[3]) * ((WHEEL_RADIUS * 2) / (M_PI * (CHASSIS_LX + CHASSIS_LY)))) / scaleToS; // Just guessing to use PI for fk
-	motor_transform[0] += motor_forward_kinematic[0] * cos(motor_transform[2]) - motor_forward_kinematic[1] * sin(motor_transform[2]);
-	motor_transform[1] += motor_forward_kinematic[0] * sin(motor_transform[2]) - motor_forward_kinematic[1] * cos(motor_transform[2]);
-	motor_transform[2] = motor_transform[2] + motor_forward_kinematic[2];
+	motor_forward_kinematic[0] = ((motor_velocity[0] + motor_velocity[1] + motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS;
+	motor_forward_kinematic[1] = ((-motor_velocity[0] + motor_velocity[1] + motor_velocity[2] - motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS;
+	// Update w transform if no IMU using or accel meter reports non stop
+	if(!using_external_imu || accel_vector >= IMU_STOP)
+	{
+		motor_transform[0] += motor_forward_kinematic[0] * cos(motor_transform[2]) - motor_forward_kinematic[1] * sin(motor_transform[2]);
+		motor_transform[1] += motor_forward_kinematic[0] * sin(motor_transform[2]) - motor_forward_kinematic[1] * cos(motor_transform[2]);
+	}
+	// Update w transform if no IMU using
+	if(!using_external_imu)
+	{
+		motor_forward_kinematic[2] = ((-motor_velocity[0] + motor_velocity[1] - motor_velocity[2] + motor_velocity[3]) * ((WHEEL_RADIUS * 2) / (M_PI * (CHASSIS_LX + CHASSIS_LY)))) / scaleToS; // Just guessing to use PI for fk
+		motor_transform[2] += motor_forward_kinematic[2];
+	}
 }

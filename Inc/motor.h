@@ -20,6 +20,9 @@
 #define PID_KI float motor_ki[WHEEL_COUNT] = {1.1, 0.8, 0.9, 1.0};
 #define PID_KD float motor_kd[WHEEL_COUNT] = {1, 2, 1, 1};
 
+// Constants - IMU
+#define IMU_STOP 9.73
+
 //
 // Function
 //
@@ -43,6 +46,7 @@ void MOTOR_Set_Single_Velocity(int motor, float velocity);
 void MOTOR_Set_PID(int motor, float kp, float ki, float kd);
 void MOTOR_Set_Software_E_Stop(bool enable);
 void MOTOR_Set_Hardware_E_Stop(bool enable);
+void MOTOR_Set_External_IMU(float ax, float ay, float az, float gz);
 void MOTOR_Reset_Transform();
 
 // Functions
