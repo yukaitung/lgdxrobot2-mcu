@@ -132,13 +132,22 @@ static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
 static int8_t CDC_TransmitCplt_FS(uint8_t *pbuf, uint32_t *Len, uint8_t epnum);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
-float Uint32_To_Float(uint32_t n)
+void Write_Uint32(uint32_t value, uint8_t *msb, uint8_t *byte2, uint8_t *byte3, uint8_t *lsb)
 {
-   return (float)(*(float*)&n);
+	*msb = (value & 4278190080) >> 24;
+	*byte2 = (value & 16711680) >> 16;
+	*byte3 = (value & 65280) >> 8;
+	*lsb = value & 255;
 }
 
-uint32_t Combine_Byte(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
-    return a << 24 | b << 16 | c << 8 | d;
+float Uint32_To_Float(uint32_t n)
+{
+  return (float)(*(float*)&n);
+}
+
+uint32_t Combine_Byte(uint32_t a, uint32_t b, uint32_t c, uint32_t d) 
+{
+  return a << 24 | b << 16 | c << 8 | d;
 }
 
 /* USER CODE END PRIVATE_FUNCTIONS_DECLARATION */
@@ -321,6 +330,27 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 			kd = Combine_Byte((uint8_t) Buf[13], (uint8_t) Buf[14], (uint8_t) Buf[15], (uint8_t) Buf[16]);
 			MOTOR_Set_PID(motor, Uint32_To_Float(kp), Uint32_To_Float(ki), Uint32_To_Float(kd));
 			break;
+    case 'S':
+      /*
+       * Serial Number
+       */
+      if (*Len != 1)
+        break;
+      uint32_t stm32Uid[3];
+      stm32Uid[0] = HAL_GetUIDw0();
+      stm32Uid[1] = HAL_GetUIDw1();
+      stm32Uid[2] = HAL_GetUIDw2();
+      static uint8_t msg[97] = {'\0'};
+      msg[0] = 0xAB;
+      int index = 1;
+      for(int i = 0; i < 3; i++)
+      {
+        Write_Uint32(stm32Uid[i], &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
+        index += 4;
+      }
+      index++;
+      CDC_Transmit_FS(msg, index);
+      break;
 		case 'T':
 			/*
 			 * Reset transform, the length is 1 byte

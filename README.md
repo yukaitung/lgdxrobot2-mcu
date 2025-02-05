@@ -46,6 +46,7 @@ This project assumes char is 1 byte; int and float are 4 bytes.
 | External IMU Data (N3)   | I              | Accel X-axis (float)    | Accel X-axis (float) | Accel X-axis (float) | Gyro Z-axis        |
 | Motor Inverse Kinematics | M              | X Velocity (float)      | Y Velocity (float)   | w Velocity (float)   |                    |
 | Motor PID                | P              | Motor Number (int) (N1) | P Constant (float)   | I Constant (float)   | D Constant (float) |
+| Serial Number (N4)       | S              |                         |                      |                      |                    |
 | Reset Transform          | T              |                         |                      |                      |                    |
 | Single Motor Velocity    | V              | Motor Number (int) (N1) | Velocity (float)     |                      |                    |
 
@@ -55,13 +56,18 @@ Note2: 0 = Disable, 1 = Enable
 
 Note3: Using ROS convention
 
+Note4: Start with pattern 0xAB
+
 ### MCU to PC
 
-A message broadcast from MCU about every 20ms, below is the sequence of the message.
+A message broadcast from MCU about every 10ms, below is the sequence of the message.
+
+Version 1:
 
 | Description              | Member                                          | Size (bytes) |
 |--------------------------|-------------------------------------------------|--------------|
 | 0xAA Pattern             | OxAA (char)                                     | 1            |
+| Version                  | version (unsigned short)                        | 1            |
 | Frame Total Size         | Size (char)                                     | 1            |
 | Refresh Time ms          | Refresh Time ms (unsigned short)                | 2            |
 | Transform                | x, y, w (3 float)                               | 12           |
@@ -73,7 +79,7 @@ A message broadcast from MCU about every 20ms, below is the sequence of the mess
 | D Constant               | wheel1, wheel2, wheel3, wheel4 (4 float)        | 16           |
 | Battery Voltage          | Battery 1, Battery 2 (N1) (unsigned short)      | 4            |
 | E-Stop Enabled           | MSB Software bit (N2), Hardware bit (N3) (char) | 1            |
-|                          | Total                                           | 113          |
+|                          | Total                                           | 114          |
 
 Note1: he chassis has 2 power source, Battery 1 is moter, Battery 2 is for computer
 
@@ -105,7 +111,7 @@ This section explains the decision for some values.
 
 ### PWM Gwnwration
 
-The PWM is to control the speed for every motors. The system clock is 92MHz and PWM frequency is 10kHz. 
+The PWM is to control the speed for every motors. The system clock is 96MHz and PWM frequency is 10kHz. 
 
 The ARR is 9599, from formula: Fpwm = (Fclk / (ARR + 1) * (PSC + 1))
 

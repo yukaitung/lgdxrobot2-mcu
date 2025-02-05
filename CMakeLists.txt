@@ -53,8 +53,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    Inc/main.h
-    Inc/motor.h
+    Inc
 )
 
 # Add project symbols (macros)

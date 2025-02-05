@@ -83,22 +83,17 @@ static void MX_TIM9_Init(void);
 /* USER CODE BEGIN 0 */
 uint32_t Float_To_Uint32(float n)
 {
-    return (uint32_t)(*(uint32_t*)&n);
+  return (uint32_t)(*(uint32_t*)&n);
 }
 
-void Write_Uint32(uint32_t value, uint8_t *msb, uint8_t *byte2, uint8_t *byte3, uint8_t *lsb)
-{
-	*msb = (value & 4278190080) >> 24;
-	*byte2 = (value & 16711680) >> 16;
-	*byte3 = (value & 65280) >> 8;
-	*lsb = value & 255;
-}
+extern void Write_Uint32(uint32_t value, uint8_t *msb, uint8_t *byte2, uint8_t *byte3, uint8_t *lsb);
 
 void Broadcast_Status()
 {
 	static uint8_t msg[128] = {'\0'};
 	msg[0] = 0xAA;
-	int index = 2;
+  msg[1] = 1;
+	int index = 3;
 	uint16_t time = MOTOR_Get_PID_elapsed(); // 32 bit to 16 bit
 	msg[index++] = (time & 65280) >> 8;
 	msg[index++] = time & 255;
@@ -149,7 +144,7 @@ void Broadcast_Status()
 	}
 	index++;
 	// Final: Size
-	msg[1] = index;
+	msg[2] = index;
 	CDC_Transmit_FS(msg, index);
 }
 
