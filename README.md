@@ -95,7 +95,7 @@ This project required a mecanum wheel chassis and control board (Refer [doc/Chas
 
 In the schematic, R1 is 100Ω, R2 and R3 are 4.7KΩ. Choose the motor with gear ratio no lower than 1:90 to ensure enough torque.
 
-Requeired software are [STM32CubeMX](https://www.st.com/en/development-tools/stm32cubemx.html), [STSW-LINK009](https://www.st.com/en/development-tools/stsw-link009.html) ([Press here for ARM64 PC](https://community.st.com/t5/stm32-mcus-boards-and-hardware/stlink-stcubeprogrammer-support-on-windows-arm64/td-p/224127)) and an ARM IDE. This project uses [MDK-Community Edition](https://www2.keil.com/mdk5/editions/community).
+This project is developed using Visual Studio Code [Press here to install required software](https://www.st.com/content/st_com/en/campaigns/stm32-vs-code-extension-z11.html)
 
 A ST-LINK/V2 is required to download program.
 
