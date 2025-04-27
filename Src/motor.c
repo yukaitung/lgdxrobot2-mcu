@@ -52,29 +52,25 @@ int safe_unsigned_subtract(int a, int b, int limit)
 	return a - b;
 }
 
-void MOTOR_Set_Pwm(int motor, int CCR)
+void MOTOR_Set_Pwm(int motor, uint32_t CCR)
 {
 	if(CCR > m_pwm_htim->Init.Period)
 	{
 		CCR = m_pwm_htim->Init.Period;
 	}
-	else if(CCR < 0)
-	{
-		CCR = 0;
-	}
 	switch(motor)
 	{
 		case 0:
-			__HAL_TIM_SetCompare(m_pwm_htim, TIM_CHANNEL_1, CCR);
+			TIM2->CCR1 = CCR;
 			break;
 		case 1:
-			__HAL_TIM_SetCompare(m_pwm_htim, TIM_CHANNEL_2, CCR);
+			TIM2->CCR2 = CCR;
 			break;
 		case 2:
-			__HAL_TIM_SetCompare(m_pwm_htim, TIM_CHANNEL_4, CCR);
+			TIM2->CCR4 = CCR;
 			break;
 		case 3:
-			__HAL_TIM_SetCompare(m_pwm_htim, TIM_CHANNEL_3, CCR);
+			TIM2->CCR3 = CCR;
 			break;
 	}
 }
@@ -311,7 +307,7 @@ void MOTOR_PID()
 	// Time elapsed
 	uint32_t currentTick = HAL_GetTick();
 	pid_elapsed = currentTick - pid_last_tick;
-	float scaleToS = 1000.0 / (float) pid_elapsed;
+	float dt = (float) pid_elapsed / 1000.0;
 	pid_last_tick = currentTick;
 	
 	// PID calculation
@@ -323,12 +319,12 @@ void MOTOR_PID()
 		if(i % 2 == 0)
 		{
 			// Motor 0, 2
-			motor_velocity[i] = (safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], motor_htim[i]->Init.Period) * ENCODER_MIN_ANGULAR) * scaleToS;
+			motor_velocity[i] = (safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], motor_htim[i]->Init.Period) / (ENCODER_PPR * dt)) * (2 * M_PI);
 		}
 		else
 		{
 			// Motor 1, 3
-			motor_velocity[i] = (-1 * safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], motor_htim[i]->Init.Period) * ENCODER_MIN_ANGULAR) * scaleToS;
+			motor_velocity[i] = (-1 * safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], motor_htim[i]->Init.Period) / (ENCODER_PPR * dt)) * (2 * M_PI);
 		}
 		// Discard anomaly in encoder
 		if(motor_velocity[i] > motor_max_speed[i] || motor_velocity[i] < -motor_max_speed[i])
@@ -336,18 +332,23 @@ void MOTOR_PID()
 		
 		// Calculate error 
 		float error = fabs(motor_target_velocity[i]) - fabs(motor_velocity[i]);
-		pid_accumulate_error[i] += error;
+		pid_accumulate_error[i] = pid_accumulate_error[i] + error * dt;
 		// Discard overshooting error
-		if(pid_accumulate_error[i] >= motor_max_speed[i])
-			pid_accumulate_error[i] = motor_max_speed[i];
-		if(pid_accumulate_error[i] <= -motor_max_speed[i])
-			pid_accumulate_error[i] = -motor_max_speed[i];
-		float error_rate = error - fabs(pid_last_error[i]);
+		pid_accumulate_error[i] = fmax(pid_accumulate_error[i], -motor_max_speed[i] * 0.2);
+		pid_accumulate_error[i] = fmin(pid_accumulate_error[i], motor_max_speed[i] * 0.2);
+		float error_rate = (error - pid_last_error[i]) / dt;
 		
 		// Get PID
-		int pid = roundf((motor_kp[i] * error + motor_ki[i] * pid_accumulate_error[i] + motor_kd[i] * error_rate) / (motor_max_speed[i] / m_pwm_htim->Init.Period));
-		newPwm[i] = ((pid > 0 && motor_target_velocity[i] != 0) ? pid : 0);
-
+		if (motor_target_velocity[i] >= PID_TARGET_SPEED_DEAD_ZONE)
+		{
+			int pid = roundf(((motor_kp[i] * error + motor_ki[i] * pid_accumulate_error[i] + motor_kd[i] * error_rate) / motor_max_speed[i]) * m_pwm_htim->Init.Period);
+			newPwm[i] = motor_target_velocity[i] != 0 ? pid : 0;
+		}
+		else // Prevent motor losing control
+		{
+			int pid = roundf(((motor_kp[i] * error + motor_ki[i] * pid_accumulate_error[i] + motor_kd[i] * error_rate) / 2 / motor_max_speed[i]) * m_pwm_htim->Init.Period);
+			newPwm[i] = motor_target_velocity[i] != 0 ? pid : 0;
+		}	
 		pid_last_error[i] = error;
 		encoder_last_value[i] = encoder_value[i];
 		motor_last_velocity[i] = motor_velocity[i];
@@ -360,8 +361,8 @@ void MOTOR_PID()
 	}
 	
 	// Odometry information
-	motor_forward_kinematic[0] = ((motor_velocity[0] + motor_velocity[1] + motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS;
-	motor_forward_kinematic[1] = ((-motor_velocity[0] + motor_velocity[1] + motor_velocity[2] - motor_velocity[3]) * (WHEEL_RADIUS / 4)) / scaleToS;
+	motor_forward_kinematic[0] = ((motor_velocity[0] + motor_velocity[1] + motor_velocity[2] + motor_velocity[3]) * (WHEEL_RADIUS / 4));
+	motor_forward_kinematic[1] = ((-motor_velocity[0] + motor_velocity[1] + motor_velocity[2] - motor_velocity[3]) * (WHEEL_RADIUS / 4));
 	// Update w transform if no IMU using or accel meter reports non stop
 	if(!using_external_imu || accel_vector >= IMU_STOP)
 	{
@@ -371,7 +372,7 @@ void MOTOR_PID()
 	// Update w transform if no IMU using
 	if(!using_external_imu)
 	{
-		motor_forward_kinematic[2] = ((-motor_velocity[0] + motor_velocity[1] - motor_velocity[2] + motor_velocity[3]) * ((WHEEL_RADIUS * 2) / (M_PI * (CHASSIS_LX + CHASSIS_LY)))) / scaleToS; // Just guessing to use PI for fk
+		motor_forward_kinematic[2] = ((-motor_velocity[0] + motor_velocity[1] - motor_velocity[2] + motor_velocity[3]) * ((WHEEL_RADIUS * 2) / (M_PI * (CHASSIS_LX + CHASSIS_LY)))); // Just guessing to use PI for fk
 		motor_transform[2] += motor_forward_kinematic[2];
 	}
 }

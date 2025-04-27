@@ -12,13 +12,14 @@
 #define MOTOR_GEAR_RATIO 90
 #define MOTOR_MAX_SPEED float motor_max_speed[WHEEL_COUNT] = {10.948, 11.424, 11.1066, 10.6306}; // By testing
 
-// Constants - Pre-Calculation
-#define ENCODER_MIN_ANGULAR 0.00158666296 // 2pi / (3960)
+// Constants - Motor Configuration
+#define PID_TARGET_SPEED_DEAD_ZONE 5
+#define ENCODER_PPR 3960
 
 // Constants - PID Configuration
-#define PID_KP float motor_kp[WHEEL_COUNT] = {11.5, 2.2, 8.0, 10};
-#define PID_KI float motor_ki[WHEEL_COUNT] = {1.1, 0.8, 0.9, 1.0};
-#define PID_KD float motor_kd[WHEEL_COUNT] = {1, 2, 1, 1};
+#define PID_KP float motor_kp[WHEEL_COUNT] = {1, 1, 1, 1};
+#define PID_KI float motor_ki[WHEEL_COUNT] = {0, 0, 0, 0};
+#define PID_KD float motor_kd[WHEEL_COUNT] = {0, 0, 0, 0};
 
 // Constants - IMU
 #define IMU_STOP 9.73
