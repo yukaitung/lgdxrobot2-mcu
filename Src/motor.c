@@ -363,7 +363,7 @@ void MOTOR_PID()
 	if(!using_external_imu || accel_vector >= IMU_STOP)
 	{
 		motor_transform[0] += (motor_forward_kinematic[0] * cos(motor_transform[2]) - motor_forward_kinematic[1] * sin(motor_transform[2])) * dt;
-		motor_transform[1] += (motor_forward_kinematic[0] * sin(motor_transform[2]) - motor_forward_kinematic[1] * cos(motor_transform[2])) * dt;
+		motor_transform[1] += (motor_forward_kinematic[0] * sin(motor_transform[2]) + motor_forward_kinematic[1] * cos(motor_transform[2])) * dt;
 	}
 	// Update w transform if no IMU using
 	if(!using_external_imu)
