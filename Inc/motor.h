@@ -13,13 +13,12 @@
 #define MOTOR_MAX_SPEED float motor_max_speed[WHEEL_COUNT] = {10.948, 11.424, 11.1066, 10.6306}; // By testing
 
 // Constants - Motor Configuration
-#define PID_TARGET_SPEED_DEAD_ZONE 5
 #define ENCODER_PPR 3960
 
 // Constants - PID Configuration
-#define PID_KP float motor_kp[WHEEL_COUNT] = {1, 1, 1, 1};
-#define PID_KI float motor_ki[WHEEL_COUNT] = {0, 0, 0, 0};
-#define PID_KD float motor_kd[WHEEL_COUNT] = {0, 0, 0, 0};
+#define PID_KP float motor_kp[WHEEL_COUNT] = {6, 5, 6, 6};
+#define PID_KI float motor_ki[WHEEL_COUNT] = {11, 11, 13, 13};
+#define PID_KD float motor_kd[WHEEL_COUNT] = {0.01, 0.01, 0.01, 0.01};
 
 // Constants - IMU
 #define IMU_STOP 9.73
