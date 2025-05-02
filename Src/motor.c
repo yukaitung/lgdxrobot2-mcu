@@ -342,9 +342,17 @@ void MOTOR_PID()
 		pid_accumulate_error[i] = fmin(pid_accumulate_error[i], motor_max_speed[i]);
 		float error_rate = (error - pid_last_error[i]) / dt;
 
-		int pid = roundf(((motor_kp[i] * error + motor_ki[i] * pid_accumulate_error[i] + motor_kd[i] * error_rate) / motor_max_speed[i]) * m_pwm_htim->Init.Period);
-		newPwm[i] = motor_target_velocity[i] != 0 ? pid : 0;
-
+		if (motor_target_velocity[i] >= PID_DEADZONE_VELOCITY)
+		{
+			int pid = roundf(((motor_kp[i] * error + motor_ki[i] * pid_accumulate_error[i] + motor_kd[i] * error_rate) / motor_max_speed[i]) * m_pwm_htim->Init.Period);
+			newPwm[i] = motor_target_velocity[i] != 0 ? pid : 0;
+		}
+		else
+		{
+			int pid = roundf(((1 * error + 1 * pid_accumulate_error[i]) / motor_max_speed[i]) * m_pwm_htim->Init.Period);
+			newPwm[i] = motor_target_velocity[i] != 0 ? pid : 0;
+		}
+		
 		pid_last_error[i] = error;
 		encoder_last_value[i] = encoder_value[i];
 		motor_last_velocity[i] = motor_velocity[i];

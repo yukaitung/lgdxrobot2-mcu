@@ -19,6 +19,7 @@
 #define PID_KP float motor_kp[WHEEL_COUNT] = {6, 5, 6, 6};
 #define PID_KI float motor_ki[WHEEL_COUNT] = {11, 11, 13, 13};
 #define PID_KD float motor_kd[WHEEL_COUNT] = {0.0, 0.0, 0.0, 0.0};
+#define PID_DEADZONE_VELOCITY 1.0
 
 // Constants - IMU
 #define IMU_STOP 9.73
