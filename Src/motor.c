@@ -18,6 +18,7 @@ float pid_last_error[WHEEL_COUNT] = {0, 0, 0, 0};
 float motor_velocity[WHEEL_COUNT] = {0, 0, 0, 0};
 float motor_last_velocity[WHEEL_COUNT] = {0, 0, 0, 0}; // Discard anomaly in encoder
 float motor_target_velocity[WHEEL_COUNT] = {0, 0, 0, 0};
+float motor_desire_velocity[WHEEL_COUNT] = {0, 0, 0, 0}; // For speed down
 uint16_t encoder_value[WHEEL_COUNT] = {0, 0, 0, 0};
 uint16_t encoder_last_value[WHEEL_COUNT] = {0, 0, 0, 0};
 float motor_transform[3] = {0, 0, 0};
@@ -145,6 +146,30 @@ void MOTOR_Reset_LED()
 	HAL_GPIO_WritePin(L_RED_GPIO_Port, L_RED_Pin, GPIO_PIN_RESET);
 }
 
+void MOTOR_Set_Desired_Speed(int motor, float target_velocity)
+{
+	if (target_velocity == 0)
+	{
+		motor_desire_velocity[motor] = 0;
+		return;
+	}
+	
+	if (target_velocity >= motor_velocity[motor])
+	{
+		// Speed up, we can achieve the velocity immediately
+		motor_desire_velocity[motor] = target_velocity;
+	}
+	else
+	{
+		// Speed down, we need to slow down gradually
+		motor_desire_velocity[motor] = motor_velocity[motor] - MOTOR_SPEED_RAMP;
+		if (motor_desire_velocity[motor] < target_velocity)
+		{
+			motor_desire_velocity[motor] = target_velocity;
+		}
+	}
+}
+
 //
 // Public Function
 //
@@ -234,6 +259,7 @@ void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w)
 	for(int i = 0; i < WHEEL_COUNT; i++)
 	{
 		motor_target_velocity[i] >= 0 ? MOTOR_Set_Direction(i, true) : MOTOR_Set_Direction(i, false);
+		MOTOR_Set_Desired_Speed(i, motor_target_velocity[i]);
 		if(motor_target_velocity[i] == 0)
 			MOTOR_Set_Pwm(i, 0);
 	}
@@ -243,6 +269,7 @@ void MOTOR_Set_Single_Velocity(int motor, float velocity)
 {
 	motor_target_velocity[motor] = velocity;
 	motor_target_velocity[motor] >= 0 ? MOTOR_Set_Direction(motor, true) : MOTOR_Set_Direction(motor, false);
+	MOTOR_Set_Desired_Speed(motor, motor_target_velocity[motor]);
 	if(motor_target_velocity[motor] == 0) 
 		MOTOR_Set_Pwm(motor, 0);
 }
@@ -334,23 +361,33 @@ void MOTOR_PID()
 		if(motor_velocity[i] > motor_max_speed[i] || motor_velocity[i] < -motor_max_speed[i])
 			motor_velocity[i] = motor_last_velocity[i];
 		
-		// Calculate error 
-		float error = fabs(motor_target_velocity[i]) - fabs(motor_velocity[i]);
+		// Calculate error
+		float error = fabs(motor_desire_velocity[i]) - fabs(motor_velocity[i]);
 		pid_accumulate_error[i] = pid_accumulate_error[i] + error * dt;
 		// Discard overshooting error
-		pid_accumulate_error[i] = fmax(pid_accumulate_error[i], -motor_max_speed[i]);
-		pid_accumulate_error[i] = fmin(pid_accumulate_error[i], motor_max_speed[i]);
+		if (pid_accumulate_error[i] > motor_max_speed[i] * 0.3)
+			pid_accumulate_error[i] = motor_max_speed[i] * 0.3;
+		if (pid_accumulate_error[i] < -motor_max_speed[i] * 0.3)
+			pid_accumulate_error[i] = -motor_max_speed[i] * 0.3;
 		float error_rate = (error - pid_last_error[i]) / dt;
 
-		if (motor_target_velocity[i] >= PID_DEADZONE_VELOCITY)
+		if(motor_target_velocity[i] > PID_DEADZONE_VELOCITY)
 		{
 			int pid = roundf(((motor_kp[i] * error + motor_ki[i] * pid_accumulate_error[i] + motor_kd[i] * error_rate) / motor_max_speed[i]) * m_pwm_htim->Init.Period);
-			newPwm[i] = motor_target_velocity[i] != 0 ? pid : 0;
+			newPwm[i] = motor_desire_velocity[i] != 0 ? pid : 0;
 		}
 		else
 		{
 			int pid = roundf(((1 * error + 1 * pid_accumulate_error[i]) / motor_max_speed[i]) * m_pwm_htim->Init.Period);
-			newPwm[i] = motor_target_velocity[i] != 0 ? pid : 0;
+			newPwm[i] = motor_desire_velocity[i] != 0 ? pid : 0;
+		}
+		
+		// For speed down
+		if (motor_desire_velocity[i] > motor_target_velocity[i])
+		{
+			motor_desire_velocity[i] -= MOTOR_SPEED_RAMP;
+			if (motor_desire_velocity[i] < motor_target_velocity[i])
+				motor_desire_velocity[i] = motor_target_velocity[i];
 		}
 		
 		pid_last_error[i] = error;
