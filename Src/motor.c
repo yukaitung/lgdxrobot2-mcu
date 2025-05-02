@@ -55,10 +55,6 @@ int safe_unsigned_subtract(int a, int b, int limit)
 
 void MOTOR_Set_Pwm(int motor, uint32_t CCR)
 {
-	if(CCR == 0)
-	{
-		pid_accumulate_error[motor] = 0;
-	}
 	if(CCR > m_pwm_htim->Init.Period)
 	{
 		CCR = m_pwm_htim->Init.Period;
@@ -153,8 +149,9 @@ void MOTOR_Set_Desired_Speed(int motor, float target_velocity)
 		motor_desire_velocity[motor] = 0;
 		return;
 	}
+	target_velocity = fabs(target_velocity);
 	
-	if (target_velocity >= motor_velocity[motor])
+	if (target_velocity >= fabs(motor_velocity[motor]))
 	{
 		// Speed up, we can achieve the velocity immediately
 		motor_desire_velocity[motor] = target_velocity;
@@ -162,7 +159,7 @@ void MOTOR_Set_Desired_Speed(int motor, float target_velocity)
 	else
 	{
 		// Speed down, we need to slow down gradually
-		motor_desire_velocity[motor] = motor_velocity[motor] - MOTOR_SPEED_RAMP;
+		motor_desire_velocity[motor] = fabs(motor_velocity[motor]) - MOTOR_SPEED_RAMP;
 		if (motor_desire_velocity[motor] < target_velocity)
 		{
 			motor_desire_velocity[motor] = target_velocity;
@@ -261,7 +258,11 @@ void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w)
 		motor_target_velocity[i] >= 0 ? MOTOR_Set_Direction(i, true) : MOTOR_Set_Direction(i, false);
 		MOTOR_Set_Desired_Speed(i, motor_target_velocity[i]);
 		if(motor_target_velocity[i] == 0)
+		{
 			MOTOR_Set_Pwm(i, 0);
+			pid_accumulate_error[i] = 0;
+			pid_last_error[i] = 0;
+		}
 	}
 }
 
@@ -270,8 +271,12 @@ void MOTOR_Set_Single_Velocity(int motor, float velocity)
 	motor_target_velocity[motor] = velocity;
 	motor_target_velocity[motor] >= 0 ? MOTOR_Set_Direction(motor, true) : MOTOR_Set_Direction(motor, false);
 	MOTOR_Set_Desired_Speed(motor, motor_target_velocity[motor]);
-	if(motor_target_velocity[motor] == 0) 
+	if(motor_target_velocity[motor] == 0)
+	{
 		MOTOR_Set_Pwm(motor, 0);
+		pid_accumulate_error[motor] = 0;
+		pid_last_error[motor] = 0;
+	}
 }
 
 void MOTOR_Set_PID(int motor, float kp, float ki, float kd)
@@ -371,7 +376,7 @@ void MOTOR_PID()
 			pid_accumulate_error[i] = -motor_max_speed[i] * 0.3;
 		float error_rate = (error - pid_last_error[i]) / dt;
 
-		if(motor_target_velocity[i] > PID_DEADZONE_VELOCITY)
+		if(fabs(motor_target_velocity[i]) > PID_DEADZONE_VELOCITY)
 		{
 			int pid = roundf(((motor_kp[i] * error + motor_ki[i] * pid_accumulate_error[i] + motor_kd[i] * error_rate) / motor_max_speed[i]) * m_pwm_htim->Init.Period);
 			newPwm[i] = motor_desire_velocity[i] != 0 ? pid : 0;
@@ -383,11 +388,11 @@ void MOTOR_PID()
 		}
 		
 		// For speed down
-		if (motor_desire_velocity[i] > motor_target_velocity[i])
+		if (motor_desire_velocity[i] != 0 && motor_desire_velocity[i] > fabs(motor_target_velocity[i]))
 		{
 			motor_desire_velocity[i] -= MOTOR_SPEED_RAMP;
-			if (motor_desire_velocity[i] < motor_target_velocity[i])
-				motor_desire_velocity[i] = motor_target_velocity[i];
+			if (motor_desire_velocity[i] < fabs(motor_target_velocity[i]))
+				motor_desire_velocity[i] = fabs(motor_target_velocity[i]);
 		}
 		
 		pid_last_error[i] = error;
