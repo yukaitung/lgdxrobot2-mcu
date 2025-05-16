@@ -1,5 +1,7 @@
 # LGDXRobot2 MCU
 
+> Please note that development is primarily done on GitLab: https://gitlab.com/yukaitung/lgdxrobot2-mcu
+
 LGDXRobot2 MCU is an STM32-based controller board designed specifically for the LGDXRobot2 platform. It supports a four-wheeled Mecanum chassis configuration with a straightforward, minimalistic design.
 
 - [Homepage](https://lgdxrobot.bristolgram.uk/lgdxrobot2/)
