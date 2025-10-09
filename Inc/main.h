@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2022 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -59,54 +59,54 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define M4_E_CH1_Pin GPIO_PIN_0
-#define M4_E_CH1_GPIO_Port GPIOA
-#define M4_E_CH2_Pin GPIO_PIN_1
-#define M4_E_CH2_GPIO_Port GPIOA
-#define M4_PWM_Pin GPIO_PIN_2
-#define M4_PWM_GPIO_Port GPIOA
-#define M3_PWM_Pin GPIO_PIN_3
-#define M3_PWM_GPIO_Port GPIOA
-#define D_STBY_Pin GPIO_PIN_4
-#define D_STBY_GPIO_Port GPIOA
-#define M2_PWM_Pin GPIO_PIN_5
-#define M2_PWM_GPIO_Port GPIOA
-#define M2_E_CH1_Pin GPIO_PIN_6
-#define M2_E_CH1_GPIO_Port GPIOA
-#define M2_E_CH2_Pin GPIO_PIN_7
-#define M2_E_CH2_GPIO_Port GPIOA
-#define L_GREEN_Pin GPIO_PIN_1
-#define L_GREEN_GPIO_Port GPIOB
-#define L_RED_Pin GPIO_PIN_2
-#define L_RED_GPIO_Port GPIOB
-#define BT1_SW_Pin GPIO_PIN_10
-#define BT1_SW_GPIO_Port GPIOB
-#define M1_IN2_Pin GPIO_PIN_12
-#define M1_IN2_GPIO_Port GPIOB
-#define M1_IN1_Pin GPIO_PIN_13
-#define M1_IN1_GPIO_Port GPIOB
-#define M2_IN1_Pin GPIO_PIN_14
-#define M2_IN1_GPIO_Port GPIOB
-#define M2_IN2_Pin GPIO_PIN_15
-#define M2_IN2_GPIO_Port GPIOB
-#define M1_E_CH1_Pin GPIO_PIN_8
-#define M1_E_CH1_GPIO_Port GPIOA
-#define M1_E_CH2_Pin GPIO_PIN_9
-#define M1_E_CH2_GPIO_Port GPIOA
-#define M3_IN2_Pin GPIO_PIN_10
-#define M3_IN2_GPIO_Port GPIOA
-#define M3_IN1_Pin GPIO_PIN_15
-#define M3_IN1_GPIO_Port GPIOA
-#define M1_PWM_Pin GPIO_PIN_3
-#define M1_PWM_GPIO_Port GPIOB
-#define M4_IN1_Pin GPIO_PIN_4
-#define M4_IN1_GPIO_Port GPIOB
-#define M4_IN2_Pin GPIO_PIN_5
-#define M4_IN2_GPIO_Port GPIOB
-#define M3_E_CH1_Pin GPIO_PIN_6
-#define M3_E_CH1_GPIO_Port GPIOB
-#define M3_E_CH2_Pin GPIO_PIN_7
-#define M3_E_CH2_GPIO_Port GPIOB
+#define DR2BIN1_Pin GPIO_PIN_14
+#define DR2BIN1_GPIO_Port GPIOC
+#define DR2BIN2_Pin GPIO_PIN_15
+#define DR2BIN2_GPIO_Port GPIOC
+#define MJ3CH2_Pin GPIO_PIN_0
+#define MJ3CH2_GPIO_Port GPIOA
+#define MJ3CH1_Pin GPIO_PIN_1
+#define MJ3CH1_GPIO_Port GPIOA
+#define DR2PWMB_Pin GPIO_PIN_2
+#define DR2PWMB_GPIO_Port GPIOA
+#define DR1PWMA_Pin GPIO_PIN_3
+#define DR1PWMA_GPIO_Port GPIOA
+#define DR1AIN2_Pin GPIO_PIN_4
+#define DR1AIN2_GPIO_Port GPIOA
+#define DR1PWMB_Pin GPIO_PIN_5
+#define DR1PWMB_GPIO_Port GPIOA
+#define MJ1CH1_Pin GPIO_PIN_6
+#define MJ1CH1_GPIO_Port GPIOA
+#define MJ1CH2_Pin GPIO_PIN_7
+#define MJ1CH2_GPIO_Port GPIOA
+#define DR1AIN1_Pin GPIO_PIN_0
+#define DR1AIN1_GPIO_Port GPIOB
+#define DRxSTBY_Pin GPIO_PIN_1
+#define DRxSTBY_GPIO_Port GPIOB
+#define DR1BIN1_Pin GPIO_PIN_2
+#define DR1BIN1_GPIO_Port GPIOB
+#define DR1BIN2_Pin GPIO_PIN_10
+#define DR1BIN2_GPIO_Port GPIOB
+#define D1_Pin GPIO_PIN_15
+#define D1_GPIO_Port GPIOB
+#define MJ4CH2_Pin GPIO_PIN_8
+#define MJ4CH2_GPIO_Port GPIOA
+#define MJ4CH1_Pin GPIO_PIN_9
+#define MJ4CH1_GPIO_Port GPIOA
+#define D2_Pin GPIO_PIN_10
+#define D2_GPIO_Port GPIOA
+#define RS1_Pin GPIO_PIN_15
+#define RS1_GPIO_Port GPIOA
+#define DR2PWMA_Pin GPIO_PIN_3
+#define DR2PWMA_GPIO_Port GPIOB
+#define DR2AIN1_Pin GPIO_PIN_4
+#define DR2AIN1_GPIO_Port GPIOB
+#define DR2AIN1B5_Pin GPIO_PIN_5
+#define DR2AIN1B5_GPIO_Port GPIOB
+#define MJ2CH2_Pin GPIO_PIN_6
+#define MJ2CH2_GPIO_Port GPIOB
+#define MJ2CH1_Pin GPIO_PIN_7
+#define MJ2CH1_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

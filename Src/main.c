@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2022 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -22,8 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "usbd_cdc_if.h"
-#include "motor.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,6 +32,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -51,17 +51,6 @@ TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim9;
 
 /* USER CODE BEGIN PV */
-// INA219
-enum __battery {
-  actuator_battery,
-  logic_battery,
-	battery_count
-} battery;
-int currentIna219 = 0;
-const uint16_t ina219Addr[battery_count] = {0x80, 0x82};
-uint8_t ina219VoltageRegister[1] = {0x02};
-uint8_t ina219VoltageData[battery_count] = {0x00, 0x00};
-uint16_t ina219VoltageValue[battery_count] = {0, 0};
 
 /* USER CODE END PV */
 
@@ -81,111 +70,6 @@ static void MX_TIM9_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint32_t Float_To_Uint32(float n)
-{
-  return (uint32_t)(*(uint32_t*)&n);
-}
-
-extern void Write_Uint32(uint32_t value, uint8_t *msb, uint8_t *byte2, uint8_t *byte3, uint8_t *lsb);
-
-void Broadcast_Status()
-{
-	static uint8_t msg[128] = {'\0'};
-	msg[0] = 0xAA;
-  msg[1] = 1;
-	int index = 3;
-	uint16_t time = MOTOR_Get_PID_elapsed(); // 32 bit to 16 bit
-	msg[index++] = (time & 65280) >> 8;
-	msg[index++] = time & 255;
-	for(int i = 0; i < 3; i++)
-	{
-		uint32_t temp = Float_To_Uint32(MOTOR_Get_Transform(i));
-		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
-		index += 4;
-	}
-	for(int i = 0; i < 3; i++)
-	{
-		uint32_t temp = Float_To_Uint32(MOTOR_Get_Fk(i));
-		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
-		index += 4;
-	}
-	for(int i = 0; i < WHEEL_COUNT; i++)
-	{
-		uint32_t temp = Float_To_Uint32(MOTOR_Get_Target_Velocity(i));
-		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
-		index += 4;
-	}
-	for(int i = 0; i < WHEEL_COUNT; i++)
-	{
-		uint32_t temp = Float_To_Uint32(MOTOR_Get_Velocity(i));
-		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
-		index += 4;
-	}
-	for(int i = 0; i < 3; i++)
-	{
-		for(int j = 0; j < WHEEL_COUNT; j++)
-		{
-			uint32_t temp = Float_To_Uint32(MOTOR_Get_PID(i, j));
-			Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
-			index += 4;
-		}
-	}
-	for(int i = 0; i < 2; i++)
-	{
-		msg[index++] = (ina219VoltageValue[i] & 65280) >> 8;
-		msg[index++] = ina219VoltageValue[i] & 255;
-	}
-	msg[index] = 0;
-	for(int i = 0; i < 2; i++)
-	{
-		bool temp = MOTOR_Get_E_Stop_Status(i);
-		if(temp)
-			msg[index] |= 1 << (7 - i);
-	}
-	index++;
-	// Final: Size
-	msg[2] = index;
-	CDC_Transmit_FS(msg, index);
-}
-
-void Update_Ina219()
-{
-	// Initalise INA219 Communication
-	HAL_I2C_Master_Transmit_IT(&hi2c1, ina219Addr[currentIna219], ina219VoltageRegister, 1);
-}
-
-void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
-{
-  // Sent Data To INA219
-	if(hi2c->Instance == hi2c1.Instance) 
-	{
-		HAL_I2C_Master_Receive_IT(&hi2c1, ina219Addr[currentIna219], ina219VoltageData, 2);
-	}
-}
-
-void HAL_I2C_MasterRxCpltCallback (I2C_HandleTypeDef *hi2c)
-{
-  // Received Data From INA219
-	if(hi2c->Instance == hi2c1.Instance) 
-	{
-		ina219VoltageValue[currentIna219] = (ina219VoltageData[0] << 8 | ina219VoltageData[1]) >> 3;
-		if(ina219VoltageValue[actuator_battery] < 1500) // Lower than 6V
-			MOTOR_Set_Hardware_E_Stop(1);
-		else
-			MOTOR_Set_Hardware_E_Stop(0);
-		currentIna219 = (currentIna219 == actuator_battery ? logic_battery : actuator_battery);
-	}
-}
-
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	if(htim->Instance == htim9.Instance)
-	{
-		MOTOR_PID();
-		Broadcast_Status();
-		Update_Ina219();
-	}
-}
 
 /* USER CODE END 0 */
 
@@ -224,17 +108,16 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_TIM5_Init();
-  MX_USB_DEVICE_Init();
   MX_TIM9_Init();
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
-	MOTOR_Init(&htim2, &htim1, &htim3, &htim4, &htim5);
-	HAL_TIM_Base_Start_IT(&htim9);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
-  {		
+  {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -383,7 +266,6 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 0 */
 
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
 
@@ -396,15 +278,6 @@ static void MX_TIM2_Init(void)
   htim2.Init.Period = 9599;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
   if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
   {
     Error_Handler();
@@ -636,6 +509,7 @@ static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
+
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
@@ -645,41 +519,48 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, D_STBY_Pin|M3_IN2_Pin|M3_IN1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, DR2BIN1_Pin|DR2BIN2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, L_GREEN_Pin|L_RED_Pin|BT1_SW_Pin|M1_IN2_Pin
-                          |M1_IN1_Pin|M2_IN1_Pin|M2_IN2_Pin|M4_IN1_Pin
-                          |M4_IN2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, DR1AIN2_Pin|D2_Pin|RS1_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PC13 PC14 PC15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, DR1AIN1_Pin|DRxSTBY_Pin|DR1BIN1_Pin|DR1BIN2_Pin
+                          |D1_Pin|DR2AIN1_Pin|DR2AIN1B5_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : D_STBY_Pin M3_IN2_Pin M3_IN1_Pin */
-  GPIO_InitStruct.Pin = D_STBY_Pin|M3_IN2_Pin|M3_IN1_Pin;
+  /*Configure GPIO pins : DR2BIN1_Pin DR2BIN2_Pin */
+  GPIO_InitStruct.Pin = DR2BIN1_Pin|DR2BIN2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : DR1AIN2_Pin D2_Pin RS1_Pin */
+  GPIO_InitStruct.Pin = DR1AIN2_Pin|D2_Pin|RS1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : L_GREEN_Pin L_RED_Pin BT1_SW_Pin M1_IN2_Pin
-                           M1_IN1_Pin M2_IN1_Pin M2_IN2_Pin M4_IN1_Pin
-                           M4_IN2_Pin */
-  GPIO_InitStruct.Pin = L_GREEN_Pin|L_RED_Pin|BT1_SW_Pin|M1_IN2_Pin
-                          |M1_IN1_Pin|M2_IN1_Pin|M2_IN2_Pin|M4_IN1_Pin
-                          |M4_IN2_Pin;
+  /*Configure GPIO pins : DR1AIN1_Pin DRxSTBY_Pin DR1BIN1_Pin DR1BIN2_Pin
+                           D1_Pin DR2AIN1_Pin DR2AIN1B5_Pin */
+  GPIO_InitStruct.Pin = DR1AIN1_Pin|DRxSTBY_Pin|DR1BIN1_Pin|DR1BIN2_Pin
+                          |D1_Pin|DR2AIN1_Pin|DR2AIN1B5_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB12 PB13 PB14 */
+  GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PA13 PA14 */
@@ -689,6 +570,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
+
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
@@ -710,8 +592,7 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
