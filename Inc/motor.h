@@ -17,7 +17,7 @@ float MOTOR_Get_Pid(int motor, int level, int k);
 bool MOTOR_Get_Emergency_Stop_Status(int type);
 void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w);
 void MOTOR_Set_Single_Motor(int motor, float velocity);
-void MOTOR_Set_Temproal_Pid(int motor, int level, float p, float i, float d);
+void MOTOR_Set_Temporary_Pid(int motor, int level, float p, float i, float d);
 void MOTOR_Set_Emergency_Stop(int type, bool enable);
 void MOTOR_Reset_Transform();
 void MOTOR_PID();

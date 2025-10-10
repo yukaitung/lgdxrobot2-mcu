@@ -66,7 +66,7 @@ typedef struct {
 typedef struct {
   uint8_t header1;
   uint8_t header2;
-  char type ;
+  char type;
   float p[API_MOTOR_COUNT][PID_LEVEL];
   float i[API_MOTOR_COUNT][PID_LEVEL];
   float d[API_MOTOR_COUNT][PID_LEVEL];

@@ -22,6 +22,9 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
+#include "lgdxrobot2.h"
+#include "motor.h"
+#include "usbd_desc.h"
 
 /* USER CODE END INCLUDE */
 
@@ -261,6 +264,62 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
+  switch(Buf[0])
+	{
+		case MCU_SOFTWARE_EMERGENCY_STOP_COMMAND_TYPE:
+      McuSoftwareEmergencyStopCommand cmd_e = {0};
+      memcpy(&cmd_e, Buf, sizeof(McuSoftwareEmergencyStopCommand));
+      MOTOR_Set_Emergency_Stop(software_emergency_stop, cmd_e.enable);
+      break;
+    case MCU_INVERSE_KINEMATICS_COMMAND_TYPE:
+      McuInverseKinematicsCommand cmd_i = {0};
+      memcpy(&cmd_i, Buf, sizeof(McuInverseKinematicsCommand));
+      MOTOR_Set_Ik(cmd_i.velocity.x, cmd_i.velocity.y, cmd_i.velocity.rotation);
+      break;
+    case MCU_MOTOR_COMMAND_TYPE:
+      McuMotorCommand cmd_m = {0};
+      memcpy(&cmd_m, Buf, sizeof(McuMotorCommand));
+      MOTOR_Set_Single_Motor(cmd_m.motor, cmd_m.velocity);
+      break;
+    case MCU_GET_PID_COMMAND_TYPE:
+      McuPid pid = {0};
+      pid.header1 = MCU_HEADER1;
+      pid.header2 = MCU_HEADER2;
+      pid.type = MCU_PID_TYPE;
+      for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
+      {
+        for(int level = 0; level < PID_LEVEL; level++)
+        {
+          pid.p[motor][level] = MOTOR_Get_Pid(motor, level, 0);
+          pid.i[motor][level] = MOTOR_Get_Pid(motor, level, 1);
+          pid.d[motor][level] = MOTOR_Get_Pid(motor, level, 2);
+        }
+      }
+      CDC_Transmit_FS((uint8_t*) &pid, sizeof(McuPid));
+      break;
+    case MCU_SET_PID_COMMAND_TYPE:
+      McuSetPidCommand cmd_q = {0};
+      memcpy(&cmd_q, Buf, sizeof(McuSetPidCommand));
+      MOTOR_Set_Temporary_Pid(cmd_q.motor, cmd_q.level, cmd_q.p, cmd_q.i, cmd_q.d);
+      break;
+    case MCU_SAVE_PID_COMMAND_TYPE:
+      break;
+    case MCU_GET_SERIAL_NUMBER_COMMAND_TYPE:
+      McuSerialNumber serial_number = {0};
+      serial_number.header1 = MCU_HEADER1;
+      serial_number.header2 = MCU_HEADER2;
+      serial_number.type = MCU_SERIAL_NUMBER_TYPE;
+      serial_number.serial_number1 = *(uint32_t *) DEVICE_ID1;
+      serial_number.serial_number2 = *(uint32_t *) DEVICE_ID2;
+      serial_number.serial_number3 = *(uint32_t *) DEVICE_ID3;
+      CDC_Transmit_FS((uint8_t*) &serial_number, sizeof(McuSerialNumber));
+      break;
+    case MCU_RESET_TRANSFORM_COMMAND_TYPE:
+      MOTOR_Reset_Transform();
+      break;
+    default:
+      break;
+  }
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
   return (USBD_OK);

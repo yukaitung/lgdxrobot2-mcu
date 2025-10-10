@@ -22,9 +22,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "usbd_cdc_if.h"
 #include "configuation.h"
 #include "motor.h"
+#include "usbd_cdc_if.h"
 
 /* USER CODE END Includes */
 
@@ -55,7 +55,7 @@ TIM_HandleTypeDef htim9;
 
 /* USER CODE BEGIN PV */
 // Data
-McuData mcu_data;
+McuData mcu_data = {0};;
 
 // Power Monitoring
 enum __batteries {
@@ -68,7 +68,7 @@ uint8_t power_monitoring_registers[2] = {0x02, 0x04}; // Volrage and Current
 const uint16_t power_monitor_address[battery_count] = {0x40 << 1, 0x41 << 1};
 int current_monitoring_battery = logic_battery;
 int current_monitoring_register = 0;
-McuPower power_monitoring_values[battery_count];
+McuPower power_monitoring_values[battery_count] = {0};
 
 /* USER CODE END PV */
 

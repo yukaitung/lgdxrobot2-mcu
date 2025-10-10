@@ -258,7 +258,7 @@ void MOTOR_Set_Single_Motor(int motor, float velocity)
 	_handle_user_velocity(motor, motors_target_velocity[motor]);
 }
 
-void MOTOR_Set_Temproal_Pid(int motor, int level, float p, float i, float d)
+void MOTOR_Set_Temporary_Pid(int motor, int level, float p, float i, float d)
 {
 	motors_Kp[level][motor] = p;
 	motors_Ki[level][motor] = i;
