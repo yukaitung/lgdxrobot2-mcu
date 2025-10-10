@@ -101,8 +101,8 @@ void Error_Handler(void);
 #define DR2PWMA_GPIO_Port GPIOB
 #define DR2AIN1_Pin GPIO_PIN_4
 #define DR2AIN1_GPIO_Port GPIOB
-#define DR2AIN1B5_Pin GPIO_PIN_5
-#define DR2AIN1B5_GPIO_Port GPIOB
+#define DR2AIN2_Pin GPIO_PIN_5
+#define DR2AIN2_GPIO_Port GPIOB
 #define MJ2CH2_Pin GPIO_PIN_6
 #define MJ2CH2_GPIO_Port GPIOB
 #define MJ2CH1_Pin GPIO_PIN_7

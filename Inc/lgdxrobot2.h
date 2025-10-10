@@ -1,9 +1,28 @@
-#pragma once
+#ifndef __LGDXROBOT2_H
+#define __LGDXROBOT2_H
 
-#include <cstdint>
+#include <stdint.h>
+#include <stdbool.h>
 
+// Operation Configuration
 #define PID_LEVEL 3
 #define API_MOTOR_COUNT 4
+
+#define MCU_HEADER1 0xAA
+#define MCU_HEADER2 0x55
+
+#define MCU_DATA_TYPE 'D'
+#define MCU_SERIAL_NUMBER_TYPE 'S'
+#define MCU_PID_TYPE 'P'
+
+#define MCU_SOFTWARE_EMERGENCY_STOP_COMMAND_TYPE 'E'
+#define MCU_INVERSE_KINEMATICS_COMMAND_TYPE 'I'
+#define MCU_MOTOR_COMMAND_TYPE 'M'
+#define MCU_GET_PID_COMMAND_TYPE 'P'
+#define MCU_SET_PID_COMMAND_TYPE 'Q'
+#define MCU_SAVE_PID_COMMAND_TYPE 'R'
+#define MCU_GET_SERIAL_NUMBER_COMMAND_TYPE 'S'
+#define MCU_RESET_TRANSFORM_COMMAND_TYPE 'T'
 
 #pragma pack(push, 1)
 
@@ -23,13 +42,12 @@ typedef struct {
 } McuPower;
 
 typedef struct {
-  const uint8_t header1 = 0xAA;
-  const uint8_t header2 = 0x55;
-  const char type = 'D';
+  uint8_t header1;
+  uint8_t header2;
+  char type;
   McuDof transform;
-  McuDof forward_kinematics;
-  float target_motors_velocity[API_MOTOR_COUNT] = {0};
-  float actural_motors_velocity[API_MOTOR_COUNT] = {0};
+  float motors_target_velocity[API_MOTOR_COUNT];
+  float motors_actural_velocity[API_MOTOR_COUNT];
   McuPower battery1;
   McuPower battery2;
   bool software_emergency_stop_enabled;
@@ -37,21 +55,21 @@ typedef struct {
 } McuData;
 
 typedef struct {
-  const uint8_t header1 = 0xAA;
-  const uint8_t header2 = 0x55;
-  const char type = 'P';
+  uint8_t header1;
+  uint8_t header2;
+  char type;
   uint32_t serial_number1;
   uint32_t serial_number2;
   uint32_t serial_number3;
 } McuSerialNumber;
 
 typedef struct {
-  const uint8_t header1 = 0xAA;
-  const uint8_t header2 = 0x55;
-  const char type = 'S';
-  float p[API_MOTOR_COUNT][PID_LEVEL] = {0};
-  float i[API_MOTOR_COUNT][PID_LEVEL] = {0};
-  float d[API_MOTOR_COUNT][PID_LEVEL] = {0};
+  uint8_t header1;
+  uint8_t header2;
+  char type ;
+  float p[API_MOTOR_COUNT][PID_LEVEL];
+  float i[API_MOTOR_COUNT][PID_LEVEL];
+  float d[API_MOTOR_COUNT][PID_LEVEL];
 } McuPid;
 
 /*
@@ -60,29 +78,29 @@ typedef struct {
 
 // Emergency stop
 typedef struct {
-  const char command = 'E';
+  char command;
   bool enable;
 } McuSoftwareEmergencyStopCommand;
 
 // Motor control
 typedef struct {
-  const char command = 'I';
+  char command;
   McuDof velocity;
 } McuInverseKinematicsCommand;
 
 typedef struct {
-  const char command = 'M';
+  char command;
   uint8_t motor;
   float velocity;
 } McuMotorCommand;
 
 // PID control
 typedef struct {
-  const char command = 'P';
+  char command;
 } McuGetPidCommand;
 
 typedef struct {
-  const char command = 'Q';
+  char command;
   uint8_t motor;
   uint8_t level;
   float p;
@@ -91,16 +109,18 @@ typedef struct {
 } McuSetPidCommand;
 
 typedef struct {
-  const char command = 'R';
+  char command;
 } McuSavePidCommand;
 
 // Other
 typedef struct {
-  const char command = 'S';
+  char command;
 } McuGetSerialNumberCommand;
 
 typedef struct {
-  const char command = 'T';
+  char command;
 } McuResetTransformCommand;
 
 #pragma pack(pop)
+
+#endif

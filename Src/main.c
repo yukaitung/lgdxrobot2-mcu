@@ -22,6 +22,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "usbd_cdc_if.h"
+#include "configuation.h"
+#include "motor.h"
 
 /* USER CODE END Includes */
 
@@ -51,6 +54,21 @@ TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim9;
 
 /* USER CODE BEGIN PV */
+// Data
+McuData mcu_data;
+
+// Power Monitoring
+enum __batteries {
+  logic_battery = 0,
+  actuator_battery,
+	battery_count
+} batteries;
+uint8_t power_monitoring_data[2] = {0x00, 0x00};
+uint8_t power_monitoring_registers[2] = {0x02, 0x04}; // Volrage and Current
+const uint16_t power_monitor_address[battery_count] = {0x40 << 1, 0x41 << 1};
+int current_monitoring_battery = logic_battery;
+int current_monitoring_register = 0;
+McuPower power_monitoring_values[battery_count];
 
 /* USER CODE END PV */
 
@@ -70,6 +88,61 @@ static void MX_TIM9_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void Handling_Mcu_Data()
+{
+  mcu_data.header1 = MCU_HEADER1;
+  mcu_data.header2 = MCU_HEADER2;
+  mcu_data.type = MCU_DATA_TYPE;
+  mcu_data.transform.x = MOTOR_Get_Transform(0);
+  mcu_data.transform.y = MOTOR_Get_Transform(1);
+  mcu_data.transform.rotation = MOTOR_Get_Transform(2);
+  for (int i = 0; i < API_MOTOR_COUNT; i++)
+  {
+    mcu_data.motors_target_velocity[i] = MOTOR_Get_Transform(i);
+    mcu_data.motors_actural_velocity[i] = MOTOR_Get_Actural_Velocity(i);
+  }
+  mcu_data.battery1 = power_monitoring_values[logic_battery];
+  mcu_data.battery2 = power_monitoring_values[actuator_battery];
+  mcu_data.software_emergency_stop_enabled = MOTOR_Get_Emergency_Stop_Status(software_emergency_stop);
+  mcu_data.hardware_emergency_stop_enabled = MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop);
+  CDC_Transmit_FS((uint8_t*) &mcu_data, sizeof(McuData));
+}
+
+void Start_Power_Monitoring()
+{
+  // Start I2C Interrupt
+  HAL_I2C_Mem_Read_IT(&hi2c1, power_monitor_address[current_monitoring_battery], power_monitoring_registers[current_monitoring_register], 1, power_monitoring_data, 2);
+}
+
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	if(hi2c->Instance == hi2c1.Instance) 
+	{
+		uint16_t result = (power_monitoring_data[0] << 8) | power_monitoring_data[1];
+    if (current_monitoring_register == 0)
+    {
+      // Voltage
+      power_monitoring_values[current_monitoring_battery].voltage = result * 0.00125;
+    }
+    else
+    {
+      // Current
+      power_monitoring_values[current_monitoring_battery].current = result * 0.001;
+    }
+    current_monitoring_register = (current_monitoring_register == 1) ? 0 : 1;
+    current_monitoring_battery = (current_monitoring_battery == logic_battery) ? actuator_battery : logic_battery;
+    Start_Power_Monitoring();
+	}
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if(htim->Instance == htim9.Instance)
+	{
+		MOTOR_PID();
+    Handling_Mcu_Data();
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -111,6 +184,18 @@ int main(void)
   MX_TIM9_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
+  // Setup Power Monitoring
+  #ifdef ENABLE_POWER_MONITORING
+  uint8_t calibration_data[2] = {0x0A, 0x00};
+  for (int i = 0; i < battery_count; i++)
+  {
+    HAL_I2C_Mem_Write(&hi2c1, power_monitor_address[i], 0x05, 1, calibration_data, 2, 1000);
+  }
+  Start_Power_Monitoring();
+  #endif
+  // Setup Motors
+  MOTOR_Init(&htim2, &htim3, &htim4, &htim5, &htim1);
+	HAL_TIM_Base_Start_IT(&htim9);
 
   /* USER CODE END 2 */
 
@@ -526,7 +611,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, DR1AIN1_Pin|DRxSTBY_Pin|DR1BIN1_Pin|DR1BIN2_Pin
-                          |D1_Pin|DR2AIN1_Pin|DR2AIN1B5_Pin, GPIO_PIN_RESET);
+                          |D1_Pin|DR2AIN1_Pin|DR2AIN2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -549,9 +634,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : DR1AIN1_Pin DRxSTBY_Pin DR1BIN1_Pin DR1BIN2_Pin
-                           D1_Pin DR2AIN1_Pin DR2AIN1B5_Pin */
+                           D1_Pin DR2AIN1_Pin DR2AIN2_Pin */
   GPIO_InitStruct.Pin = DR1AIN1_Pin|DRxSTBY_Pin|DR1BIN1_Pin|DR1BIN2_Pin
-                          |D1_Pin|DR2AIN1_Pin|DR2AIN1B5_Pin;
+                          |D1_Pin|DR2AIN1_Pin|DR2AIN2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
