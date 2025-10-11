@@ -18,7 +18,7 @@ float pid_last_error[API_MOTOR_COUNT] = {0, 0, 0, 0};
 
 float transform[3] = {0, 0, 0};
 
-float motors_actural_velocity[API_MOTOR_COUNT] = {0, 0, 0, 0}; // The velocity measured by the encoder
+float motors_actual_velocity[API_MOTOR_COUNT] = {0, 0, 0, 0}; // The velocity measured by the encoder
 float motors_last_velocity[API_MOTOR_COUNT] = {0, 0, 0, 0}; // For discarding the anomaly
 float motors_target_velocity[API_MOTOR_COUNT] = {0, 0, 0, 0}; // The velocity set by the user
 float motors_desire_velocity[API_MOTOR_COUNT] = {0, 0, 0, 0}; // For slow down gradually
@@ -167,7 +167,7 @@ void _handle_user_velocity(int motor, float target_velocity)
 	_set_direction(motor, target_velocity);
 	target_velocity = fabs(target_velocity);
 	
-	if (target_velocity >= fabs(motors_actural_velocity[motor]))
+	if (target_velocity >= fabs(motors_actual_velocity[motor]))
 	{
 		// Speed up, we can achieve the velocity immediately
 		motors_desire_velocity[motor] = target_velocity;
@@ -175,7 +175,7 @@ void _handle_user_velocity(int motor, float target_velocity)
 	else
 	{
 		// Speed down, we need to slow down gradually
-		motors_desire_velocity[motor] = fabs(motors_actural_velocity[motor]) - MOTOR_SPEED_RAMP;
+		motors_desire_velocity[motor] = fabs(motors_actual_velocity[motor]) - MOTOR_SPEED_RAMP;
 		if (motors_desire_velocity[motor] < target_velocity)
 		{
 			// But not slower than target velocity
@@ -217,9 +217,14 @@ float MOTOR_Get_Transform(int axis)
 	return transform[axis];
 }
 
-float MOTOR_Get_Actural_Velocity(int motor)
+float MOTOR_Get_Actual_Velocity(int motor)
 {
-	return motors_actural_velocity[motor];
+	return motors_actual_velocity[motor];
+}
+
+float MOTOR_Get_Target_Velocity(int motor)
+{
+	return motors_target_velocity[motor];
 }
 
 float MOTOR_Get_Level_Velocity(int level)
@@ -317,14 +322,14 @@ void MOTOR_PID()
 	for(int i = 0; i < API_MOTOR_COUNT; i++)
 	{
 		encoder_value[i] = __HAL_TIM_GET_COUNTER(encoders_htim[i]);
-		motors_actural_velocity[i] = (_safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], encoders_htim[i]->Init.Period) / (ENCODER_PPR * dt)) * (2 * M_PI);
+		motors_actual_velocity[i] = (_safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], encoders_htim[i]->Init.Period) / (ENCODER_PPR * dt)) * (2 * M_PI);
 
 		// Discard anomaly in encoder
-		if(motors_actural_velocity[i] > motor_max_speed[i] || motors_actural_velocity[i] < -motor_max_speed[i])
-			motors_actural_velocity[i] = motors_last_velocity[i];
+		if(motors_actual_velocity[i] > motor_max_speed[i] || motors_actual_velocity[i] < -motor_max_speed[i])
+			motors_actual_velocity[i] = motors_last_velocity[i];
 		
 		// Calculate error
-		float error = motors_desire_velocity[i] - motors_actural_velocity[i];
+		float error = motors_desire_velocity[i] - motors_actual_velocity[i];
 		pid_accumulate_error[i] = pid_accumulate_error[i] + error * dt;
 		// Discard overshooting error
 		if (pid_accumulate_error[i] > motor_max_speed[i] * 0.3f)
@@ -357,7 +362,7 @@ void MOTOR_PID()
 
 		pid_last_error[i] = error;
 		encoder_last_value[i] = encoder_value[i];
-		motors_last_velocity[i] = motors_actural_velocity[i];
+		motors_last_velocity[i] = motors_actual_velocity[i];
 	}
 	
 	// Apply PID
@@ -368,9 +373,9 @@ void MOTOR_PID()
 	
 	// Odometry information
 	float motors_forward_kinematic[3] = {0, 0, 0};
-	motors_forward_kinematic[0] = (motors_actural_velocity[0] + motors_actural_velocity[1] + motors_actural_velocity[2] + motors_actural_velocity[3]) * (WHEEL_RADIUS / 4);
-	motors_forward_kinematic[1] = (-motors_actural_velocity[0] + motors_actural_velocity[1] + motors_actural_velocity[2] - motors_actural_velocity[3]) * (WHEEL_RADIUS / 4);
-	motors_forward_kinematic[2] = (-motors_actural_velocity[0] + motors_actural_velocity[1] - motors_actural_velocity[2] + motors_actural_velocity[3]) * ((WHEEL_RADIUS * 2) / (M_PI * (CHASSIS_LX + CHASSIS_LY))); // Just guessing to use PI for fk
+	motors_forward_kinematic[0] = (motors_actual_velocity[0] + motors_actual_velocity[1] + motors_actual_velocity[2] + motors_actual_velocity[3]) * (WHEEL_RADIUS / 4);
+	motors_forward_kinematic[1] = (-motors_actual_velocity[0] + motors_actual_velocity[1] + motors_actual_velocity[2] - motors_actual_velocity[3]) * (WHEEL_RADIUS / 4);
+	motors_forward_kinematic[2] = (-motors_actual_velocity[0] + motors_actual_velocity[1] - motors_actual_velocity[2] + motors_actual_velocity[3]) * ((WHEEL_RADIUS * 2) / (M_PI * (CHASSIS_LX + CHASSIS_LY))); // Just guessing to use PI for fk
 	transform[0] += (motors_forward_kinematic[0] * cos(transform[2]) - motors_forward_kinematic[1] * sin(transform[2])) * dt;
 	transform[1] += (motors_forward_kinematic[0] * sin(transform[2]) + motors_forward_kinematic[1] * cos(transform[2])) * dt;
 	transform[2] += (motors_forward_kinematic[2] * dt);

@@ -98,8 +98,8 @@ void Handling_Mcu_Data()
   mcu_data.transform.rotation = MOTOR_Get_Transform(2);
   for (int i = 0; i < API_MOTOR_COUNT; i++)
   {
-    mcu_data.motors_target_velocity[i] = MOTOR_Get_Transform(i);
-    mcu_data.motors_actural_velocity[i] = MOTOR_Get_Actural_Velocity(i);
+    mcu_data.motors_target_velocity[i] = MOTOR_Get_Target_Velocity(i);
+    mcu_data.motors_actual_velocity[i] = MOTOR_Get_Actual_Velocity(i);
   }
   mcu_data.battery1 = power_monitoring_values[logic_battery];
   mcu_data.battery2 = power_monitoring_values[actuator_battery];
