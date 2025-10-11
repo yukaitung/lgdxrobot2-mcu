@@ -14,6 +14,7 @@
 #define MOTOR_MAX_SPEED float motor_max_speed[API_MOTOR_COUNT] = {10.948f, 11.424f, 11.1066f, 10.6306f};
 
 // PID Configuration
+#define PID_LEVEL_VELOCITY float level_velocity[PID_LEVEL] = {0.0f, 0.0f, 0.0f};
 #define PID_KP float motors_Kp[PID_LEVEL][API_MOTOR_COUNT] = { {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0} };
 #define PID_KI float motors_Ki[PID_LEVEL][API_MOTOR_COUNT] = { {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0} };
 #define PID_KD float motors_Kd[PID_LEVEL][API_MOTOR_COUNT] = { {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0} };

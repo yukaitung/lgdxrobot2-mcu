@@ -6,6 +6,7 @@
 #include "motor.h"
 
 // Constant from motor.h
+PID_LEVEL_VELOCITY
 MOTOR_MAX_SPEED
 PID_KP
 PID_KI
@@ -221,6 +222,11 @@ float MOTOR_Get_Actural_Velocity(int motor)
 	return motors_actural_velocity[motor];
 }
 
+float MOTOR_Get_Level_Velocity(int level)
+{
+	return level_velocity[level];
+}
+
 float MOTOR_Get_Pid(int motor, int level, int k)
 {
 	switch (k)
@@ -258,11 +264,23 @@ void MOTOR_Set_Single_Motor(int motor, float velocity)
 	_handle_user_velocity(motor, motors_target_velocity[motor]);
 }
 
+void MOTOR_Set_Temporary_Level_Velocity(float level1, float level2, float level3)
+{
+	level_velocity[0] = level1;
+	level_velocity[1] = level2;
+	level_velocity[2] = level3;
+}
+
 void MOTOR_Set_Temporary_Pid(int motor, int level, float p, float i, float d)
 {
 	motors_Kp[level][motor] = p;
 	motors_Ki[level][motor] = i;
 	motors_Kd[level][motor] = d;
+}
+
+void MOTOR_Save_Pid()
+{
+	// TODO
 }
 
 void MOTOR_Set_Emergency_Stop(int type, bool enable)
