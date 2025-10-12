@@ -8,7 +8,8 @@
 enum __emergency_stops {
 	software_emergency_stop = 0,
 	hardware_emergency_stop = 1,
-	emergency_stops_count = 2
+	bettery_low_emergency_stop = 2,
+	emergency_stops_count = 3
 };
 
 void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *e1_htim, TIM_HandleTypeDef *e2_htim, TIM_HandleTypeDef *e3_htim, TIM_HandleTypeDef *e4_htim);

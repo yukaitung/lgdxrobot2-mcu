@@ -112,6 +112,7 @@ void Handling_Mcu_Data()
   mcu_data.battery2 = power_monitoring_values[actuator_battery];
   mcu_data.software_emergency_stop_enabled = MOTOR_Get_Emergency_Stop_Status(software_emergency_stop);
   mcu_data.hardware_emergency_stop_enabled = MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop);
+  mcu_data.bettery_low_emergency_stop_enabled = MOTOR_Get_Emergency_Stop_Status(bettery_low_emergency_stop);
   CDC_Transmit_FS((uint8_t*) &mcu_data, sizeof(McuData));
 }
 
@@ -126,16 +127,44 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
 	if(hi2c->Instance == hi2c1.Instance) 
 	{
 		uint16_t result = (power_monitoring_data[0] << 8) | power_monitoring_data[1];
+
+    // Convert the power data
     if (current_monitoring_register == 0)
     {
       // Voltage
+      float voltage = result * 0.00125;
+
+      if (current_monitoring_battery == actuator_battery)
+      {
+        // Voltage Lower than a threshold -> Battery low
+        if (voltage < POWER_MINIMUM_VOLTAGE && !MOTOR_Get_Emergency_Stop_Status(bettery_low_emergency_stop))
+          MOTOR_Set_Emergency_Stop(bettery_low_emergency_stop, true);
+        else if (voltage >= POWER_MINIMUM_VOLTAGE && MOTOR_Get_Emergency_Stop_Status(bettery_low_emergency_stop))
+          MOTOR_Set_Emergency_Stop(bettery_low_emergency_stop, false);
+      }
+
       power_monitoring_values[current_monitoring_battery].voltage = result * 0.00125;
     }
     else
     {
       // Current
-      power_monitoring_values[current_monitoring_battery].current = result * 0.001;
+      float current = result * 0.001;
+
+      if (current_monitoring_battery == actuator_battery)
+      {
+        // If the current exceeds the threshold, the connection is terminated by an emergency stop in the actuator battery.
+        if (current > POWER_MAXIMUM_CURRENT && !MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop))
+          MOTOR_Set_Emergency_Stop(hardware_emergency_stop, true);
+        else if (current <= POWER_MAXIMUM_CURRENT && MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop))
+          MOTOR_Set_Emergency_Stop(hardware_emergency_stop, false);
+      }
+
+      if (current > POWER_MAXIMUM_CURRENT)
+        current = 0.0f;
+      power_monitoring_values[current_monitoring_battery].current = current;
     }
+
+    // Switch to the next data
     current_monitoring_register++;
     if (current_monitoring_register >= 2)
     {

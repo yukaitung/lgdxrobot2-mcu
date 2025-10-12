@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include "configuation.h"
@@ -30,7 +31,7 @@ float motors_desire_velocity[API_MOTOR_COUNT] = {0, 0, 0, 0}; // For slow down g
 uint16_t encoder_value[API_MOTOR_COUNT] = {0, 0, 0, 0};
 uint16_t encoder_last_value[API_MOTOR_COUNT] = {0, 0, 0, 0};
 
-bool emergency_stops_enabled[emergency_stops_count] = {false, false};
+bool emergency_stops_enabled[emergency_stops_count] = {false, false, false};
 
 TIM_HandleTypeDef *pwm_htim;
 TIM_HandleTypeDef *encoders_htim[API_MOTOR_COUNT];
