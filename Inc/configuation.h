@@ -3,6 +3,10 @@
 
 #include "lgdxrobot2.h"
 
+// Calculation
+#define PWM_MAX 9599
+#define ENCODER_MAX 65535
+
 // Chassis Configuration
 #define CHASSIS_LX 0.237f
 #define CHASSIS_LY 0.287f
@@ -15,7 +19,7 @@
 
 // PID Configuration
 #define PID_LEVEL_VELOCITY float level_velocity[PID_LEVEL] = {0.0f, 0.0f, 0.0f};
-#define PID_KP float motors_Kp[PID_LEVEL][API_MOTOR_COUNT] = { {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0} };
+#define PID_KP float motors_Kp[PID_LEVEL][API_MOTOR_COUNT] = { {1.0f, 1.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f} };
 #define PID_KI float motors_Ki[PID_LEVEL][API_MOTOR_COUNT] = { {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0} };
 #define PID_KD float motors_Kd[PID_LEVEL][API_MOTOR_COUNT] = { {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0} };
 #define MOTOR_SPEED_RAMP 0.1f

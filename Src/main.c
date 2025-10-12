@@ -100,7 +100,13 @@ void Handling_Mcu_Data()
   {
     mcu_data.motors_target_velocity[i] = MOTOR_Get_Target_Velocity(i);
     mcu_data.motors_actual_velocity[i] = MOTOR_Get_Actual_Velocity(i);
+    mcu_data.motors_desire_velocity[i] = MOTOR_Get_Desired_Velocity(i);
+    mcu_data.pid_output[i] = MOTOR_Get_Pid_Output(i);
   }
+  mcu_data.motors_ccr[0] = htim2.Init.Period;
+  mcu_data.motors_ccr[1] = htim3.Init.Period;
+  mcu_data.motors_ccr[2] = htim4.Init.Period;
+  mcu_data.motors_ccr[3] = htim5.Init.Period;
   mcu_data.battery1 = power_monitoring_values[logic_battery];
   mcu_data.battery2 = power_monitoring_values[actuator_battery];
   mcu_data.software_emergency_stop_enabled = MOTOR_Get_Emergency_Stop_Status(software_emergency_stop);
@@ -129,8 +135,12 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
       // Current
       power_monitoring_values[current_monitoring_battery].current = result * 0.001;
     }
-    current_monitoring_register = (current_monitoring_register == 1) ? 0 : 1;
-    current_monitoring_battery = (current_monitoring_battery == logic_battery) ? actuator_battery : logic_battery;
+    current_monitoring_register++;
+    if (current_monitoring_register >= 2)
+    {
+      current_monitoring_register = 0;
+      current_monitoring_battery = (current_monitoring_battery == 1) ? 0 : 1;
+    }
     Start_Power_Monitoring();
 	}
 }
@@ -351,6 +361,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 0 */
 
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
 
@@ -363,6 +374,15 @@ static void MX_TIM2_Init(void)
   htim2.Init.Period = 9599;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
   {
     Error_Handler();
