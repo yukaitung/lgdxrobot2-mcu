@@ -24,6 +24,7 @@
 /* USER CODE BEGIN INCLUDE */
 #include "lgdxrobot2.h"
 #include "motor.h"
+#include "stm32f4xx_hal.h"
 #include "usbd_desc.h"
 
 /* USER CODE END INCLUDE */
@@ -320,9 +321,9 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
       serial_number.header3 = MCU_HEADER3;
       serial_number.header4 = MCU_HEADER4;
       serial_number.type = MCU_SERIAL_NUMBER_TYPE;
-      serial_number.serial_number1 = *(uint32_t *) DEVICE_ID1;
-      serial_number.serial_number2 = *(uint32_t *) DEVICE_ID2;
-      serial_number.serial_number3 = *(uint32_t *) DEVICE_ID3;
+      serial_number.serial_number1 = HAL_GetUIDw0() + HAL_GetUIDw2();
+      serial_number.serial_number2 = HAL_GetUIDw1();
+      serial_number.serial_number3 = HAL_GetUIDw2();
       CDC_Transmit_FS((uint8_t*) &serial_number, sizeof(McuSerialNumber));
       break;
     case MCU_RESET_TRANSFORM_COMMAND_TYPE:
