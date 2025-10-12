@@ -19,6 +19,7 @@ int encoder_counter_max = 0;
 uint32_t pid_last_tick = 0;
 float pid_accumulate_error[API_MOTOR_COUNT] = {0, 0, 0, 0};
 float pid_last_error[API_MOTOR_COUNT] = {0, 0, 0, 0};
+float pid_d_fileter[API_MOTOR_COUNT] = {0, 0, 0, 0};
 int pid_output[API_MOTOR_COUNT] = {0, 0, 0, 0};
 
 float transform[3] = {0, 0, 0};
@@ -35,6 +36,13 @@ bool emergency_stops_enabled[emergency_stops_count] = {false, false, false};
 
 TIM_HandleTypeDef *pwm_htim;
 TIM_HandleTypeDef *encoders_htim[API_MOTOR_COUNT];
+
+
+typedef struct {
+	float p;
+	float i;
+	float d;
+} _pid;
 
 /*
  * Private Functions
@@ -322,6 +330,50 @@ void MOTOR_Reset_Transform()
 		transform[i] = 0;
 }
 
+_pid get_pid_from_linear_interpolation(int lower_level, int higher_level, int motor, float alpha)
+{
+	if (alpha <= 0.0f) alpha = 0.0f;
+	if (alpha >= 1.0f) alpha = 1.0f;
+
+	_pid pid = {0, 0, 0};
+	pid.p = motors_Kp[lower_level][motor] + (alpha * (motors_Kp[higher_level][motor] - motors_Kp[lower_level][motor]));
+	pid.i = motors_Ki[lower_level][motor] + (alpha * (motors_Ki[higher_level][motor] - motors_Ki[lower_level][motor]));
+	pid.d = motors_Kd[lower_level][motor] + (alpha * (motors_Kd[higher_level][motor] - motors_Kd[lower_level][motor]));
+	return pid;
+}
+
+_pid _get_pid_from_speed(int motor, float speed)
+{
+	_pid pid = {0, 0, 0};
+	if (speed <= level_velocity[0])
+	{
+		pid.p = motors_Kp[0][motor];
+		pid.i = motors_Ki[0][motor];
+		pid.d = motors_Kd[0][motor];
+		return pid;
+	}
+	if (speed >= level_velocity[2])
+	{
+		pid.p = motors_Kp[2][motor];
+		pid.i = motors_Ki[2][motor];
+		pid.d = motors_Kd[2][motor];
+		return pid;
+	}
+
+	if (speed <= level_velocity[1])
+	{
+		// Speed between level 0 and 1
+		float a = (speed - level_velocity[0]) / (level_velocity[1] - level_velocity[0]);
+		return get_pid_from_linear_interpolation(0, 1, motor, a);
+	}
+	else 
+	{
+		// Speed between level 1 and 2
+		float a = (speed - level_velocity[1]) / (level_velocity[2] - level_velocity[1]);
+		return get_pid_from_linear_interpolation(1, 2, motor, a);
+	}
+}
+
 void MOTOR_PID()
 {
 	// Time elapsed
@@ -333,26 +385,56 @@ void MOTOR_PID()
 	// PID calculation
 	for(int i = 0; i < API_MOTOR_COUNT; i++)
 	{
+		// 1. Get encoder value
 		encoder_value[i] = __HAL_TIM_GET_COUNTER(encoders_htim[i]);
 		motors_actual_velocity[i] = (_safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], encoder_counter_max) / (ENCODER_PPR * dt)) * (2 * M_PI);
 
 		// Discard anomaly in encoder
 		if(motors_actual_velocity[i] > motor_max_speed[i] || motors_actual_velocity[i] < -motor_max_speed[i])
 			motors_actual_velocity[i] = motors_last_velocity[i];
-		
-		// Calculate error
-		float error = fabs(motors_desire_velocity[i]) - fabs(motors_actual_velocity[i]);
-		pid_accumulate_error[i] = pid_accumulate_error[i] + error * dt;
-		// Discard overshooting error
-		if (pid_accumulate_error[i] > motor_max_speed[i] * 0.3f)
-			pid_accumulate_error[i] = motor_max_speed[i] * 0.3f;
-		if (pid_accumulate_error[i] < -motor_max_speed[i] * 0.3f)
-			pid_accumulate_error[i] = -motor_max_speed[i] * 0.3f;
-		float error_rate = (error - pid_last_error[i]) / dt;
 
-		pid_output[i] = roundf(((motors_Kp[0][i] * error + motors_Ki[0][i] * pid_accumulate_error[i] + motors_Kd[0][i] * error_rate) / motor_max_speed[i]) * pwm_counter_max);
+		// 2. Calculate PID
+		// Get PID from speed
+		_pid pid = _get_pid_from_speed(i, motors_desire_velocity[i]);
+
+		// Calaculate error and P
+		float error = fabs(motors_desire_velocity[i]) - fabs(motors_actual_velocity[i]);
+		float pid_p = pid.p * error;
+
+		// Calcuater I using trapezoidal rule
+		float pid_trapezoidal = 0.5 * (error + pid_last_error[i]) * dt;
+		pid_accumulate_error[i] += pid_trapezoidal;
+		float pid_i = pid.i * pid_accumulate_error[i];
+
+		// Calculate D
+		float derivative = (error - pid_last_error[i]) / dt;
+		float tau = 0.04f; // filter time constant (seconds) 
+		float alpha = dt / (tau + dt);
+		pid_d_fileter[i] += alpha * (derivative - pid_d_fileter[i]);
+		float pid_d = -pid.d * pid_d_fileter[i];
+
+		pid_output[i] = roundf(((pid_p + pid_i + pid_d) / motor_max_speed[i]) * pwm_counter_max);
 		pid_output[i] = motors_desire_velocity[i] != 0 ? abs(pid_output[i]) : 0;
 
+		// Discard overshooting error
+		if (pid_output[i] > pwm_counter_max)
+		{
+			pid_output[i] = pwm_counter_max;
+			if (pid.i != 0.0f && error * pid.i > 0.0f)
+			{
+				pid_accumulate_error[i] -= pid_trapezoidal;
+			}
+		}
+		else if (pid_output[i] < 0)
+		{
+			pid_output[i] = 0;
+			if (pid.i != 0.0f && error * pid.i < 0.0f)
+			{
+				pid_accumulate_error[i] -= pid_trapezoidal;
+			}
+		}
+
+		// 3. Update State
 		// For speed down
 		if (motors_desire_velocity[i] != 0 && motors_desire_velocity[i] > fabs(motors_target_velocity[i]))
 		{
