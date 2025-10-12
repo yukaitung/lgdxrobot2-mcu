@@ -69,6 +69,9 @@ const uint16_t power_monitor_address[battery_count] = {0x40 << 1, 0x41 << 1};
 int current_monitoring_battery = logic_battery;
 int current_monitoring_register = 0;
 McuPower power_monitoring_values[battery_count] = {0};
+#define actuator_battery_current_history_size 20
+float actuator_battery_current_history[actuator_battery_current_history_size] = {0};
+int actuator_battery_current_history_index = 0;
 
 /* USER CODE END PV */
 
@@ -152,10 +155,18 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
 
       if (current_monitoring_battery == actuator_battery)
       {
+        actuator_battery_current_history[actuator_battery_current_history_index++] = current;
+        actuator_battery_current_history_index %= 10;
+
+        float average_current = 0;
+        for (int i = 0; i < actuator_battery_current_history_size; i++)
+          average_current += actuator_battery_current_history[i];
+        average_current /= actuator_battery_current_history_size;
+
         // If the current exceeds the threshold, the connection is terminated by an emergency stop in the actuator battery.
-        if (current > POWER_MAXIMUM_CURRENT && !MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop))
+        if (average_current > POWER_MAXIMUM_CURRENT && !MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop))
           MOTOR_Set_Emergency_Stop(hardware_emergency_stop, true);
-        else if (current <= POWER_MAXIMUM_CURRENT && MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop))
+        else if (average_current <= POWER_MAXIMUM_CURRENT && MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop))
           MOTOR_Set_Emergency_Stop(hardware_emergency_stop, false);
       }
 
