@@ -290,6 +290,8 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
       McuPid pid = {0};
       pid.header1 = MCU_HEADER1;
       pid.header2 = MCU_HEADER2;
+      pid.header3 = MCU_HEADER3;
+      pid.header4 = MCU_HEADER4;
       pid.type = MCU_PID_TYPE;
       for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
       {
@@ -315,6 +317,8 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
       McuSerialNumber serial_number = {0};
       serial_number.header1 = MCU_HEADER1;
       serial_number.header2 = MCU_HEADER2;
+      serial_number.header3 = MCU_HEADER3;
+      serial_number.header4 = MCU_HEADER4;
       serial_number.type = MCU_SERIAL_NUMBER_TYPE;
       serial_number.serial_number1 = *(uint32_t *) DEVICE_ID1;
       serial_number.serial_number2 = *(uint32_t *) DEVICE_ID2;

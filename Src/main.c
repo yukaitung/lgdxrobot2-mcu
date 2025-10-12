@@ -92,6 +92,8 @@ void Handling_Mcu_Data()
 {
   mcu_data.header1 = MCU_HEADER1;
   mcu_data.header2 = MCU_HEADER2;
+  mcu_data.header3 = MCU_HEADER3;
+  mcu_data.header4 = MCU_HEADER4;
   mcu_data.type = MCU_DATA_TYPE;
   mcu_data.transform.x = MOTOR_Get_Transform(0);
   mcu_data.transform.y = MOTOR_Get_Transform(1);
@@ -101,12 +103,11 @@ void Handling_Mcu_Data()
     mcu_data.motors_target_velocity[i] = MOTOR_Get_Target_Velocity(i);
     mcu_data.motors_actual_velocity[i] = MOTOR_Get_Actual_Velocity(i);
     mcu_data.motors_desire_velocity[i] = MOTOR_Get_Desired_Velocity(i);
-    mcu_data.pid_output[i] = MOTOR_Get_Pid_Output(i);
   }
-  mcu_data.motors_ccr[0] = htim2.Init.Period;
-  mcu_data.motors_ccr[1] = htim3.Init.Period;
-  mcu_data.motors_ccr[2] = htim4.Init.Period;
-  mcu_data.motors_ccr[3] = htim5.Init.Period;
+  mcu_data.motors_ccr[0] = TIM2->CCR1;
+  mcu_data.motors_ccr[1] = TIM2->CCR2;
+  mcu_data.motors_ccr[2] = TIM2->CCR4;
+  mcu_data.motors_ccr[3] = TIM2->CCR3;
   mcu_data.battery1 = power_monitoring_values[logic_battery];
   mcu_data.battery2 = power_monitoring_values[actuator_battery];
   mcu_data.software_emergency_stop_enabled = MOTOR_Get_Emergency_Stop_Status(software_emergency_stop);

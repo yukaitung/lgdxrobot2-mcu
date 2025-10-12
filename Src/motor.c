@@ -12,10 +12,13 @@ PID_KP
 PID_KI
 PID_KD
 
+int pwm_counter_max = 0;
+int encoder_counter_max = 0;
+
 uint32_t pid_last_tick = 0;
 float pid_accumulate_error[API_MOTOR_COUNT] = {0, 0, 0, 0};
 float pid_last_error[API_MOTOR_COUNT] = {0, 0, 0, 0};
-float pid_output[API_MOTOR_COUNT] = {0, 0, 0, 0};
+int pid_output[API_MOTOR_COUNT] = {0, 0, 0, 0};
 
 float transform[3] = {0, 0, 0};
 
@@ -70,16 +73,16 @@ void _reset_led()
 		if(emergency_stops_enabled[i])
 			return;
 	}
-	HAL_GPIO_WritePin(DRxSTBY_GPIO_Port, DRxSTBY_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(DRxSTBY_GPIO_Port, DRxSTBY_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(D2_GPIO_Port, D2_Pin, GPIO_PIN_RESET);
 }
 
 void _set_ccr(int motor, int ccr)
 {
-	if(ccr > PWM_MAX)
+	if(ccr > pwm_counter_max)
 	{
-		ccr = PWM_MAX;
+		ccr = pwm_counter_max;
 	}
 	switch(motor)
 	{
@@ -117,18 +120,6 @@ void _set_direction(int motor, bool forward)
 		case 1:
 			if(forward)
 			{
-				HAL_GPIO_WritePin(DR1AIN2_GPIO_Port, DR1AIN2_Pin, GPIO_PIN_SET);
-				HAL_GPIO_WritePin(DR1AIN1_GPIO_Port, DR1AIN1_Pin, GPIO_PIN_RESET);
-			}
-			else
-			{
-				HAL_GPIO_WritePin(DR1AIN2_GPIO_Port, DR1AIN2_Pin, GPIO_PIN_RESET);
-				HAL_GPIO_WritePin(DR1AIN1_GPIO_Port, DR1AIN1_Pin, GPIO_PIN_SET);
-			}
-			break;
-		case 2:
-			if(forward)
-			{
 				HAL_GPIO_WritePin(DR2AIN1_GPIO_Port, DR2AIN1_Pin, GPIO_PIN_SET);
 				HAL_GPIO_WritePin(DR2AIN2_GPIO_Port, DR2AIN2_Pin, GPIO_PIN_RESET);
 			}
@@ -136,6 +127,18 @@ void _set_direction(int motor, bool forward)
 			{
 				HAL_GPIO_WritePin(DR2AIN1_GPIO_Port, DR2AIN1_Pin, GPIO_PIN_RESET);
 				HAL_GPIO_WritePin(DR2AIN2_GPIO_Port, DR2AIN2_Pin, GPIO_PIN_SET);
+			}
+			break;
+		case 2:
+			if(forward)
+			{
+				HAL_GPIO_WritePin(DR1AIN2_GPIO_Port, DR1AIN2_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(DR1AIN1_GPIO_Port, DR1AIN1_Pin, GPIO_PIN_RESET);
+			}
+			else
+			{
+				HAL_GPIO_WritePin(DR1AIN2_GPIO_Port, DR1AIN2_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(DR1AIN1_GPIO_Port, DR1AIN1_Pin, GPIO_PIN_SET);
 			}
 			break;
 		case 3:
@@ -197,6 +200,9 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *e1_htim, TIM_Han
 	encoders_htim[2] = e3_htim;
 	encoders_htim[3] = e4_htim;
 
+	pwm_counter_max = pwm_htim->Init.Period;
+	encoder_counter_max = encoders_htim[0]->Init.Period;
+
 	HAL_TIM_PWM_Start(pwm_htim, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(pwm_htim, TIM_CHANNEL_2);
 	HAL_TIM_PWM_Start(pwm_htim, TIM_CHANNEL_3);
@@ -250,11 +256,6 @@ float MOTOR_Get_Pid(int motor, int level, int k)
 			return motors_Kd[level][motor];
 	}
 	return 0;
-}
-
-float MOTOR_Get_Pid_Output(int motor)
-{
-	return pid_output[motor];
 }
 
 bool MOTOR_Get_Emergency_Stop_Status(int type)
@@ -332,7 +333,7 @@ void MOTOR_PID()
 	for(int i = 0; i < API_MOTOR_COUNT; i++)
 	{
 		encoder_value[i] = __HAL_TIM_GET_COUNTER(encoders_htim[i]);
-		motors_actual_velocity[i] = (_safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], ENCODER_MAX) / (ENCODER_PPR * dt)) * (2 * M_PI);
+		motors_actual_velocity[i] = (_safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], encoder_counter_max) / (ENCODER_PPR * dt)) * (2 * M_PI);
 
 		// Discard anomaly in encoder
 		if(motors_actual_velocity[i] > motor_max_speed[i] || motors_actual_velocity[i] < -motor_max_speed[i])
@@ -348,8 +349,8 @@ void MOTOR_PID()
 			pid_accumulate_error[i] = -motor_max_speed[i] * 0.3f;
 		float error_rate = (error - pid_last_error[i]) / dt;
 
-		pid_output[i] = roundf(((motors_Kp[0][i] * error + motors_Ki[0][i] * pid_accumulate_error[i] + motors_Kd[0][i] * error_rate) / motor_max_speed[i]) * PWM_MAX);
-		pid_output[i] = motors_desire_velocity[i] != 0 ? pid_output[i] : 0;
+		pid_output[i] = roundf(((motors_Kp[0][i] * error + motors_Ki[0][i] * pid_accumulate_error[i] + motors_Kd[0][i] * error_rate) / motor_max_speed[i]) * pwm_counter_max);
+		pid_output[i] = motors_desire_velocity[i] != 0 ? abs(pid_output[i]) : 0;
 
 		// For speed down
 		if (motors_desire_velocity[i] != 0 && motors_desire_velocity[i] > fabs(motors_target_velocity[i]))

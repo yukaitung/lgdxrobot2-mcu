@@ -18,7 +18,6 @@ float MOTOR_Get_Desired_Velocity(int motor);
 float MOTOR_Get_Target_Velocity(int motor);
 float MOTOR_Get_Level_Velocity(int level);
 float MOTOR_Get_Pid(int motor, int level, int k);
-float MOTOR_Get_Pid_Output(int motor);
 bool MOTOR_Get_Emergency_Stop_Status(int type);
 void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w);
 void MOTOR_Set_Single_Motor(int motor, float velocity);

@@ -3,10 +3,6 @@
 
 #include "lgdxrobot2.h"
 
-// Calculation
-#define PWM_MAX 9599
-#define ENCODER_MAX 65535
-
 // Chassis Configuration
 #define CHASSIS_LX 0.237f
 #define CHASSIS_LY 0.287f
