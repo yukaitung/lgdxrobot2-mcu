@@ -44,6 +44,12 @@ typedef struct {
 	float d;
 } _pid;
 
+typedef struct {
+	bool modified;
+	_pid pid[PID_LEVEL][API_MOTOR_COUNT];
+	float level_velocity[PID_LEVEL];
+} _pid_save;
+
 /*
  * Private Functions
  */
@@ -172,10 +178,15 @@ void _handle_user_velocity(int motor, float target_velocity)
 	
 	if (target_velocity == 0)
 	{
-		motors_desire_velocity[motor] = 0;
 		_set_ccr(motor, 0);
+		motors_actual_velocity[motor] = 0;
+		motors_desire_velocity[motor] = 0;
+		motors_last_velocity[motor] = 0;
+		motors_target_velocity[motor] = 0;
 		pid_accumulate_error[motor] = 0;
+		pid_d_fileter[motor] = 0;
 		pid_last_error[motor] = 0;
+		pid_output[motor] = 0;
 		return;
 	}
 

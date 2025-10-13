@@ -294,14 +294,14 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
       pid.header3 = MCU_HEADER3;
       pid.header4 = MCU_HEADER4;
       pid.type = MCU_PID_TYPE;
-      for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
+      for(int level = 0; level < PID_LEVEL; level++)
       {
-        for(int level = 0; level < PID_LEVEL; level++)
+        for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
         {
           pid.level_velocity[level] = MOTOR_Get_Level_Velocity(level);
-          pid.p[motor][level] = MOTOR_Get_Pid(motor, level, 0);
-          pid.i[motor][level] = MOTOR_Get_Pid(motor, level, 1);
-          pid.d[motor][level] = MOTOR_Get_Pid(motor, level, 2);
+          pid.p[level][motor] = MOTOR_Get_Pid(motor, level, 0);
+          pid.i[level][motor] = MOTOR_Get_Pid(motor, level, 1);
+          pid.d[level][motor] = MOTOR_Get_Pid(motor, level, 2);
         }
       }
       CDC_Transmit_FS((uint8_t*) &pid, sizeof(McuPid));
