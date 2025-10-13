@@ -11,7 +11,7 @@
 // Motor Configuration
 #define ENCODER_PPR 3960
 #define MOTOR_GEAR_RATIO 90
-#define MOTOR_MAX_SPEED float motor_max_speed[API_MOTOR_COUNT] = { 10.948f, 11.424f, 10.7893f, 10.4720f };
+#define MOTOR_MAX_SPEED float motor_max_speed[API_MOTOR_COUNT] = { 12.8520f, 12.0586f, 11.7413f, 10.4720f };
 
 // PID Configuration
 #define PID_LEVEL_VELOCITY float level_velocity[PID_LEVEL] = { 2.0f, 5.0f, 10.0f };
