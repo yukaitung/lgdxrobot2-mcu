@@ -53,6 +53,7 @@ typedef struct {
 	uint8_t modified;
 	_pid pid[PID_LEVEL][API_MOTOR_COUNT];
 	float level_velocity[PID_LEVEL];
+	float motors_maximum_speed[API_MOTOR_COUNT];
 } _pid_save;
 #pragma pack(pop)
 
@@ -235,6 +236,10 @@ void _read_pid_from_flash()
 			}
 			level_velocity[level] = pid_save.level_velocity[level];
 		}
+		for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
+		{
+			motor_max_speed[motor] = pid_save.motors_maximum_speed[motor];
+		}
 	}
 }
 
@@ -292,6 +297,11 @@ float MOTOR_Get_Level_Velocity(int level)
 	return level_velocity[level];
 }
 
+float MOTOR_Get_Maximum_Speed(int motor)
+{
+	return motor_max_speed[motor];
+}
+
 float MOTOR_Get_Pid(int motor, int level, int k)
 {
 	switch (k)
@@ -343,6 +353,14 @@ void MOTOR_Set_Temporary_Pid(int motor, int level, float p, float i, float d)
 	motors_Kd[level][motor] = d;
 }
 
+void MOTOR_Set_Temporary_Maximum_Speed(float speed1, float speed2, float speed3, float speed4)
+{
+	motor_max_speed[0] = speed1;
+	motor_max_speed[1] = speed2;
+	motor_max_speed[2] = speed3;
+	motor_max_speed[3] = speed4;
+}
+
 void MOTOR_Save_Pid()
 {
 	_pid_save pid_save = {0};
@@ -356,6 +374,10 @@ void MOTOR_Save_Pid()
 			pid_save.pid[level][motor].d = motors_Kd[level][motor];
 		}
 		pid_save.level_velocity[level] = level_velocity[level];
+	}
+	for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
+	{
+		pid_save.motors_maximum_speed[motor] = motor_max_speed[motor];
 	}
 	uint8_t* data = (uint8_t*) &pid_save;
 	HAL_FLASH_Unlock();

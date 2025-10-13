@@ -304,6 +304,10 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
           pid.d[level][motor] = MOTOR_Get_Pid(motor, level, 2);
         }
       }
+      for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
+      {
+        pid.motors_maximum_speed[motor] = MOTOR_Get_Maximum_Speed(motor);
+      }
       CDC_Transmit_FS((uint8_t*) &pid, sizeof(McuPid));
       break;
     case MCU_SET_PID_COMMAND_TYPE:
@@ -313,6 +317,11 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
       break;
     case MCU_SAVE_PID_COMMAND_TYPE:
       MOTOR_Save_Pid();
+      break;
+    case MCU_SET_MOTOR_MAXIMUM_SPEED_COMMAND_TYPE:
+      McuSetMotorMaximumSpeedCommand cmd_u = {0};
+      memcpy(&cmd_u, Buf, sizeof(McuSetMotorMaximumSpeedCommand));
+      MOTOR_Set_Temporary_Maximum_Speed(cmd_u.speed[0], cmd_u.speed[1], cmd_u.speed[2], cmd_u.speed[3]);
       break;
     case MCU_GET_SERIAL_NUMBER_COMMAND_TYPE:
       McuSerialNumber serial_number = {0};
