@@ -1,9 +1,12 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "configuation.h"
 #include "main.h"
+#include "stm32f4xx_hal_flash.h"
+#include "stm32f4xx_hal_flash_ex.h"
 #include "motor.h"
 
 // Constant from motor.h
@@ -37,6 +40,7 @@ bool emergency_stops_enabled[emergency_stops_count] = {false, false, false};
 TIM_HandleTypeDef *pwm_htim;
 TIM_HandleTypeDef *encoders_htim[API_MOTOR_COUNT];
 
+uint32_t flash_start_address = 0x08040000U;
 
 typedef struct {
 	float p;
@@ -44,11 +48,13 @@ typedef struct {
 	float d;
 } _pid;
 
+#pragma pack(push, 1)
 typedef struct {
-	bool modified;
+	uint8_t modified;
 	_pid pid[PID_LEVEL][API_MOTOR_COUNT];
 	float level_velocity[PID_LEVEL];
 } _pid_save;
+#pragma pack(pop)
 
 /*
  * Private Functions
@@ -212,8 +218,30 @@ void _handle_user_velocity(int motor, float target_velocity)
  * Public Functions
  */
 
+void _read_pid_from_flash()
+{
+	_pid_save pid_save = {0};
+	uint8_t *flash = (uint8_t*)(uintptr_t)flash_start_address;
+	memcpy(&pid_save, flash, sizeof(_pid_save));
+	if (pid_save.modified == MCU_HEADER1)
+	{
+		for(int level = 0; level < PID_LEVEL; level++)
+		{
+			for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
+			{
+				motors_Kp[level][motor] = pid_save.pid[level][motor].p;
+				motors_Ki[level][motor] = pid_save.pid[level][motor].i;
+				motors_Kd[level][motor] = pid_save.pid[level][motor].d;
+			}
+			level_velocity[level] = pid_save.level_velocity[level];
+		}
+	}
+}
+
 void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *e1_htim, TIM_HandleTypeDef *e2_htim, TIM_HandleTypeDef *e3_htim, TIM_HandleTypeDef *e4_htim)
 {
+	_read_pid_from_flash();
+
 	pwm_htim = pwm_htim;
 	encoders_htim[0] = e1_htim;
 	encoders_htim[1] = e2_htim;
@@ -317,7 +345,26 @@ void MOTOR_Set_Temporary_Pid(int motor, int level, float p, float i, float d)
 
 void MOTOR_Save_Pid()
 {
-	// TODO
+	_pid_save pid_save = {0};
+	pid_save.modified = MCU_HEADER1;
+	for(int level = 0; level < PID_LEVEL; level++)
+	{
+		for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
+		{
+			pid_save.pid[level][motor].p = motors_Kp[level][motor];
+			pid_save.pid[level][motor].i = motors_Ki[level][motor];
+			pid_save.pid[level][motor].d = motors_Kd[level][motor];
+		}
+		pid_save.level_velocity[level] = level_velocity[level];
+	}
+	uint8_t* data = (uint8_t*) &pid_save;
+	HAL_FLASH_Unlock();
+	FLASH_Erase_Sector(6, FLASH_VOLTAGE_RANGE_3);
+	for(int i = 0; i < sizeof(_pid_save); i++)
+	{
+		HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, flash_start_address + i, data[i]);
+	}
+	HAL_FLASH_Lock();
 }
 
 void MOTOR_Set_Emergency_Stop(int type, bool enable)
