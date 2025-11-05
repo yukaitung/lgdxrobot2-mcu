@@ -98,6 +98,7 @@ void Handling_Mcu_Data()
   mcu_data.header3 = MCU_HEADER3;
   mcu_data.header4 = MCU_HEADER4;
   mcu_data.type = MCU_DATA_TYPE;
+  mcu_data.response_time = MOTOR_Get_Pid_Elapsed();
   mcu_data.transform.x = MOTOR_Get_Transform(0);
   mcu_data.transform.y = MOTOR_Get_Transform(1);
   mcu_data.transform.rotation = MOTOR_Get_Transform(2);

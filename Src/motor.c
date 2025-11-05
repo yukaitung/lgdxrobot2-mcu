@@ -19,6 +19,7 @@ PID_KD
 int pwm_counter_max = 0;
 int encoder_counter_max = 0;
 
+uint32_t pid_elapsed = 0;
 uint32_t pid_last_tick = 0;
 float pid_accumulate_error[API_MOTOR_COUNT] = {0, 0, 0, 0};
 float pid_last_error[API_MOTOR_COUNT] = {0, 0, 0, 0};
@@ -272,6 +273,11 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *e1_htim, TIM_Han
 	_set_led(true);
 }
 
+uint32_t MOTOR_Get_Pid_Elapsed()
+{
+	return pid_elapsed;
+}
+
 float MOTOR_Get_Transform(int axis)
 {
 	return transform[axis];
@@ -458,7 +464,7 @@ void MOTOR_PID()
 {
 	// Time elapsed
 	uint32_t currentTick = HAL_GetTick();
-	uint32_t pid_elapsed = currentTick - pid_last_tick;
+	pid_elapsed = currentTick - pid_last_tick;
 	float dt = (float) pid_elapsed / 1000.0f;
 	pid_last_tick = currentTick;
 	

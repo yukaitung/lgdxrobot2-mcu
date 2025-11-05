@@ -13,6 +13,7 @@ enum __emergency_stops {
 };
 
 void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *e1_htim, TIM_HandleTypeDef *e2_htim, TIM_HandleTypeDef *e3_htim, TIM_HandleTypeDef *e4_htim);
+uint32_t MOTOR_Get_Pid_Elapsed();
 float MOTOR_Get_Transform(int axis);
 float MOTOR_Get_Actual_Velocity(int motor);
 float MOTOR_Get_Desired_Velocity(int motor);
