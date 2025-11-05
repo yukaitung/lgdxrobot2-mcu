@@ -10,7 +10,7 @@
 #include "motor.h"
 
 // Constant from motor.h
-PID_LEVEL_VELOCITY
+PID_SPEED
 MOTOR_MAX_SPEED
 PID_KP
 PID_KI
@@ -53,7 +53,7 @@ typedef struct {
 typedef struct {
 	uint8_t modified;
 	_pid pid[PID_LEVEL][API_MOTOR_COUNT];
-	float level_velocity[PID_LEVEL];
+	float pid_speed[PID_LEVEL];
 	float motors_maximum_speed[API_MOTOR_COUNT];
 } _pid_save;
 #pragma pack(pop)
@@ -235,7 +235,7 @@ void _read_pid_from_flash()
 				motors_Ki[level][motor] = pid_save.pid[level][motor].i;
 				motors_Kd[level][motor] = pid_save.pid[level][motor].d;
 			}
-			level_velocity[level] = pid_save.level_velocity[level];
+			pid_speed[level] = pid_save.pid_speed[level];
 		}
 		for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
 		{
@@ -298,9 +298,9 @@ float MOTOR_Get_Target_Velocity(int motor)
 	return motors_target_velocity[motor];
 }
 
-float MOTOR_Get_Level_Velocity(int level)
+float MOTOR_Get_Pid_Speed(int level)
 {
-	return level_velocity[level];
+	return pid_speed[level];
 }
 
 float MOTOR_Get_Maximum_Speed(int motor)
@@ -345,11 +345,11 @@ void MOTOR_Set_Single_Motor(int motor, float velocity)
 	_handle_user_velocity(motor, motors_target_velocity[motor]);
 }
 
-void MOTOR_Set_Temporary_Level_Velocity(float level1, float level2, float level3)
+void MOTOR_Set_Temporary_Pid_Speed(float level1, float level2, float level3)
 {
-	level_velocity[0] = level1;
-	level_velocity[1] = level2;
-	level_velocity[2] = level3;
+	pid_speed[0] = level1;
+	pid_speed[1] = level2;
+	pid_speed[2] = level3;
 }
 
 void MOTOR_Set_Temporary_Pid(int motor, int level, float p, float i, float d)
@@ -379,7 +379,7 @@ void MOTOR_Save_Pid()
 			pid_save.pid[level][motor].i = motors_Ki[level][motor];
 			pid_save.pid[level][motor].d = motors_Kd[level][motor];
 		}
-		pid_save.level_velocity[level] = level_velocity[level];
+		pid_save.pid_speed[level] = pid_speed[level];
 	}
 	for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
 	{
@@ -431,14 +431,14 @@ _pid get_pid_from_linear_interpolation(int lower_level, int higher_level, int mo
 _pid _get_pid_from_speed(int motor, float speed)
 {
 	_pid pid = {0, 0, 0};
-	if (speed <= level_velocity[0])
+	if (speed <= pid_speed[0])
 	{
 		pid.p = motors_Kp[0][motor];
 		pid.i = motors_Ki[0][motor];
 		pid.d = motors_Kd[0][motor];
 		return pid;
 	}
-	if (speed >= level_velocity[2])
+	if (speed >= pid_speed[2])
 	{
 		pid.p = motors_Kp[2][motor];
 		pid.i = motors_Ki[2][motor];
@@ -446,16 +446,16 @@ _pid _get_pid_from_speed(int motor, float speed)
 		return pid;
 	}
 
-	if (speed <= level_velocity[1])
+	if (speed <= pid_speed[1])
 	{
 		// Speed between level 0 and 1
-		float a = (speed - level_velocity[0]) / (level_velocity[1] - level_velocity[0]);
+		float a = (speed - pid_speed[0]) / (pid_speed[1] - pid_speed[0]);
 		return get_pid_from_linear_interpolation(0, 1, motor, a);
 	}
 	else 
 	{
 		// Speed between level 1 and 2
-		float a = (speed - level_velocity[1]) / (level_velocity[2] - level_velocity[1]);
+		float a = (speed - pid_speed[1]) / (pid_speed[2] - pid_speed[1]);
 		return get_pid_from_linear_interpolation(1, 2, motor, a);
 	}
 }

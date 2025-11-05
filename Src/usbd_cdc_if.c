@@ -282,10 +282,10 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
       memcpy(&cmd_m, Buf, sizeof(McuMotorCommand));
       MOTOR_Set_Single_Motor(cmd_m.motor, cmd_m.velocity);
       break;
-    case MCU_SET_LEVEL_VELOCITY_COMMAND_TYPE:
-      McuSetLevelVelocityCommand cmd_l = {0};
-      memcpy(&cmd_l, Buf, sizeof(McuSetLevelVelocityCommand));
-      MOTOR_Set_Temporary_Level_Velocity(cmd_l.level_velocity[0], cmd_l.level_velocity[1], cmd_l.level_velocity[2]);
+    case MCU_SET_PID_SPEED_COMMAND_TYPE:
+      McuSetPidSpeedCommand cmd_l = {0};
+      memcpy(&cmd_l, Buf, sizeof(McuSetPidSpeedCommand));
+      MOTOR_Set_Temporary_Pid_Speed(cmd_l.pid_speed[0], cmd_l.pid_speed[1], cmd_l.pid_speed[2]);
       break;
     case MCU_GET_PID_COMMAND_TYPE:
       McuPid pid = {0};
@@ -298,7 +298,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
       {
         for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
         {
-          pid.level_velocity[level] = MOTOR_Get_Level_Velocity(level);
+          pid.pid_speed[level] = MOTOR_Get_Pid_Speed(level);
           pid.p[level][motor] = MOTOR_Get_Pid(motor, level, 0);
           pid.i[level][motor] = MOTOR_Get_Pid(motor, level, 1);
           pid.d[level][motor] = MOTOR_Get_Pid(motor, level, 2);
