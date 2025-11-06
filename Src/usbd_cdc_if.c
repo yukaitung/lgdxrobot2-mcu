@@ -322,6 +322,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
       McuSetMotorMaximumSpeedCommand cmd_u = {0};
       memcpy(&cmd_u, Buf, sizeof(McuSetMotorMaximumSpeedCommand));
       MOTOR_Set_Temporary_Maximum_Speed(cmd_u.speed[0], cmd_u.speed[1], cmd_u.speed[2], cmd_u.speed[3]);
+      MOTOR_Set_Ik(0, 0, 0);
       break;
     case MCU_GET_SERIAL_NUMBER_COMMAND_TYPE:
       McuSerialNumber serial_number = {0};
