@@ -280,36 +280,53 @@ uint32_t MOTOR_Get_Pid_Elapsed()
 
 float MOTOR_Get_Transform(int axis)
 {
+	if (axis < 0 || axis > 2)
+		return 0;
 	return transform[axis];
 }
 
 float MOTOR_Get_Actual_Velocity(int motor)
 {
+	if (motor < 0 || motor > API_MOTOR_COUNT)
+		return 0;
 	return motors_actual_velocity[motor];
 }
 
 float MOTOR_Get_Desired_Velocity(int motor)
 {
+	if (motor < 0 || motor > API_MOTOR_COUNT)
+		return 0;
 	return motors_desire_velocity[motor];
 }
 
 float MOTOR_Get_Target_Velocity(int motor)
 {
+	if (motor < 0 || motor > API_MOTOR_COUNT)
+		return 0;
 	return motors_target_velocity[motor];
 }
 
 float MOTOR_Get_Pid_Speed(int level)
 {
+	if (level < 0 || level > PID_LEVEL)
+		return 0;
 	return pid_speed[level];
 }
 
 float MOTOR_Get_Maximum_Speed(int motor)
 {
+	if (motor < 0 || motor > API_MOTOR_COUNT)
+		return 0;
 	return motor_max_speed[motor];
 }
 
 float MOTOR_Get_Pid(int motor, int level, int k)
 {
+	if (motor < 0 || motor > API_MOTOR_COUNT)
+		return 0;
+	if (level < 0 || level > PID_LEVEL)
+		return 0;
+
 	switch (k)
 	{
 		case 0: // Kp
@@ -324,6 +341,9 @@ float MOTOR_Get_Pid(int motor, int level, int k)
 
 bool MOTOR_Get_Emergency_Stop_Status(int type)
 {
+	if (type < 0 || type > emergency_stops_count)
+		return false;
+
 	return emergency_stops_enabled[type];
 }
 
@@ -341,6 +361,9 @@ void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w)
 
 void MOTOR_Set_Single_Motor(int motor, float velocity)
 {
+	if (motor < 0 || motor > API_MOTOR_COUNT)
+		return;
+
 	motors_target_velocity[motor] = velocity;
 	_handle_user_velocity(motor, motors_target_velocity[motor]);
 }
@@ -354,6 +377,11 @@ void MOTOR_Set_Temporary_Pid_Speed(float level1, float level2, float level3)
 
 void MOTOR_Set_Temporary_Pid(int motor, int level, float p, float i, float d)
 {
+	if (motor < 0 || motor > API_MOTOR_COUNT)
+		return;
+	if (level < 0 || level > PID_LEVEL)
+		return;
+
 	motors_Kp[level][motor] = p;
 	motors_Ki[level][motor] = i;
 	motors_Kd[level][motor] = d;
@@ -397,6 +425,9 @@ void MOTOR_Save_Pid()
 
 void MOTOR_Set_Emergency_Stop(int type, bool enable)
 {
+	if (type < 0 || type > emergency_stops_count)
+		return;
+	
 	if (enable)
 	{
 		HAL_GPIO_WritePin(DRxSTBY_GPIO_Port, DRxSTBY_Pin, GPIO_PIN_RESET);

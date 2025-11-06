@@ -248,6 +248,8 @@ int main(void)
   // Setup Motors
   MOTOR_Init(&htim2, &htim3, &htim4, &htim5, &htim1);
 	HAL_TIM_Base_Start_IT(&htim9);
+  MOTOR_Reset_Transform();
+  MOTOR_Set_Ik(0, 0, 0);
 
   /* USER CODE END 2 */
 
