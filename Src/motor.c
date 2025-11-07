@@ -27,6 +27,7 @@ float pid_d_fileter[API_MOTOR_COUNT] = {0, 0, 0, 0};
 int pid_output[API_MOTOR_COUNT] = {0, 0, 0, 0};
 
 float transform[3] = {0, 0, 0};
+float motors_forward_kinematic[3] = {0, 0, 0};
 
 float motors_actual_velocity[API_MOTOR_COUNT] = {0, 0, 0, 0}; // The velocity measured by the encoder
 float motors_last_velocity[API_MOTOR_COUNT] = {0, 0, 0, 0}; // For discarding the anomaly
@@ -283,6 +284,13 @@ float MOTOR_Get_Transform(int axis)
 	if (axis < 0 || axis > 2)
 		return 0;
 	return transform[axis];
+}
+
+float MOTOR_Get_Forward_Kinematic(int axis)
+{
+	if (axis < 0 || axis > 2)
+		return 0;
+	return motors_forward_kinematic[axis];
 }
 
 float MOTOR_Get_Actual_Velocity(int motor)
@@ -572,7 +580,6 @@ void MOTOR_PID()
 	}
 	
 	// Odometry information
-	float motors_forward_kinematic[3] = {0, 0, 0};
 	motors_forward_kinematic[0] = (motors_actual_velocity[0] + motors_actual_velocity[1] + motors_actual_velocity[2] + motors_actual_velocity[3]) * (WHEEL_RADIUS / 4);
 	motors_forward_kinematic[1] = (-motors_actual_velocity[0] + motors_actual_velocity[1] + motors_actual_velocity[2] - motors_actual_velocity[3]) * (WHEEL_RADIUS / 4);
 	motors_forward_kinematic[2] = (-motors_actual_velocity[0] + motors_actual_velocity[1] - motors_actual_velocity[2] + motors_actual_velocity[3]) * ((WHEEL_RADIUS * 2) / (M_PI * (CHASSIS_LX + CHASSIS_LY))); // Just guessing to use PI for fk

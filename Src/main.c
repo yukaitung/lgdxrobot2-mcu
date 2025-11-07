@@ -102,6 +102,9 @@ void Handling_Mcu_Data()
   mcu_data.transform.x = MOTOR_Get_Transform(0);
   mcu_data.transform.y = MOTOR_Get_Transform(1);
   mcu_data.transform.rotation = MOTOR_Get_Transform(2);
+  mcu_data.forward_kinematic.x = MOTOR_Get_Forward_Kinematic(0);
+  mcu_data.forward_kinematic.y = MOTOR_Get_Forward_Kinematic(1);
+  mcu_data.forward_kinematic.rotation = MOTOR_Get_Forward_Kinematic(2);
   for (int i = 0; i < API_MOTOR_COUNT; i++)
   {
     mcu_data.motors_target_velocity[i] = MOTOR_Get_Target_Velocity(i);
