@@ -589,7 +589,8 @@ void MOTOR_PID()
 	// Odometry information
 	motors_forward_kinematic[0] = (motors_actual_velocity[0] + motors_actual_velocity[1] + motors_actual_velocity[2] + motors_actual_velocity[3]) * (WHEEL_RADIUS / 4);
 	motors_forward_kinematic[1] = (-motors_actual_velocity[0] + motors_actual_velocity[1] + motors_actual_velocity[2] - motors_actual_velocity[3]) * (WHEEL_RADIUS / 4);
-	motors_forward_kinematic[2] = (-motors_actual_velocity[0] + motors_actual_velocity[1] - motors_actual_velocity[2] + motors_actual_velocity[3]) * (WHEEL_RADIUS / (4 * (CHASSIS_LX + CHASSIS_LY)));
+	motors_forward_kinematic[2] = (-motors_actual_velocity[0] + motors_actual_velocity[1] - motors_actual_velocity[2] + motors_actual_velocity[3]) * (WHEEL_RADIUS / (4 * (CHASSIS_LX + CHASSIS_LY )));
+	transform[0] += (motors_forward_kinematic[0] * cos(transform[2]) - motors_forward_kinematic[1] * sin(transform[2])) * dt;
 	transform[1] += (motors_forward_kinematic[0] * sin(transform[2]) + motors_forward_kinematic[1] * cos(transform[2])) * dt;
 	transform[2] += (motors_forward_kinematic[2] * dt);
 }
