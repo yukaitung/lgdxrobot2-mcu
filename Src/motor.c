@@ -559,6 +559,13 @@ void MOTOR_PID()
 			}
 		}
 
+		// Discard error at 0
+		if (pid_output[i] == 0)
+		{
+			pid_accumulate_error[i] = 0;
+			pid_d_fileter[i] = 0;
+		}
+
 		// 3. Update State
 		// For speed down
 		if (motors_desire_velocity[i] != 0 && motors_desire_velocity[i] > fabs(motors_target_velocity[i]))
