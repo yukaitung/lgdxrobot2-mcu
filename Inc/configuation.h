@@ -4,8 +4,8 @@
 #include "lgdxrobot2.h"
 
 // Chassis Configuration
-#define CHASSIS_LX 0.237f
-#define CHASSIS_LY 0.287f
+#define CHASSIS_LX 0.24f
+#define CHASSIS_LY 0.24f
 #define WHEEL_RADIUS 0.0375f
 
 // Motor Configuration
