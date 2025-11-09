@@ -265,82 +265,85 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
-  switch(Buf[0])
-	{
-		case MCU_SOFTWARE_EMERGENCY_STOP_COMMAND_TYPE:
-      McuSoftwareEmergencyStopCommand cmd_e = {0};
-      memcpy(&cmd_e, Buf, sizeof(McuSoftwareEmergencyStopCommand));
-      MOTOR_Set_Emergency_Stop(software_emergency_stop, cmd_e.enable);
-      break;
-    case MCU_INVERSE_KINEMATICS_COMMAND_TYPE:
-      McuInverseKinematicsCommand cmd_i = {0};
-      memcpy(&cmd_i, Buf, sizeof(McuInverseKinematicsCommand));
-      MOTOR_Set_Ik(cmd_i.velocity.x, cmd_i.velocity.y, cmd_i.velocity.rotation);
-      break;
-    case MCU_MOTOR_COMMAND_TYPE:
-      McuMotorCommand cmd_m = {0};
-      memcpy(&cmd_m, Buf, sizeof(McuMotorCommand));
-      MOTOR_Set_Single_Motor(cmd_m.motor, cmd_m.velocity);
-      break;
-    case MCU_SET_PID_SPEED_COMMAND_TYPE:
-      McuSetPidSpeedCommand cmd_l = {0};
-      memcpy(&cmd_l, Buf, sizeof(McuSetPidSpeedCommand));
-      MOTOR_Set_Temporary_Pid_Speed(cmd_l.pid_speed[0], cmd_l.pid_speed[1], cmd_l.pid_speed[2]);
-      break;
-    case MCU_GET_PID_COMMAND_TYPE:
-      McuPid pid = {0};
-      pid.header1 = MCU_HEADER1;
-      pid.header2 = MCU_HEADER2;
-      pid.header3 = MCU_HEADER3;
-      pid.header4 = MCU_HEADER4;
-      pid.type = MCU_PID_TYPE;
-      for(int level = 0; level < PID_LEVEL; level++)
-      {
-        for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
+  if (*Len >= 3 && Buf[0] == MCU_HEADER1 && Buf[1] == MCU_HEADER2)
+  {
+    switch(Buf[2])
+    {
+      case MCU_SOFTWARE_EMERGENCY_STOP_COMMAND_TYPE:
+        McuSoftwareEmergencyStopCommand cmd_e = {0};
+        memcpy(&cmd_e, Buf, sizeof(McuSoftwareEmergencyStopCommand));
+        MOTOR_Set_Emergency_Stop(software_emergency_stop, cmd_e.enable);
+        break;
+      case MCU_INVERSE_KINEMATICS_COMMAND_TYPE:
+        McuInverseKinematicsCommand cmd_i = {0};
+        memcpy(&cmd_i, Buf, sizeof(McuInverseKinematicsCommand));
+        MOTOR_Set_Ik(cmd_i.velocity.x, cmd_i.velocity.y, cmd_i.velocity.rotation);
+        break;
+      case MCU_MOTOR_COMMAND_TYPE:
+        McuMotorCommand cmd_m = {0};
+        memcpy(&cmd_m, Buf, sizeof(McuMotorCommand));
+        MOTOR_Set_Single_Motor(cmd_m.motor, cmd_m.velocity);
+        break;
+      case MCU_SET_PID_SPEED_COMMAND_TYPE:
+        McuSetPidSpeedCommand cmd_l = {0};
+        memcpy(&cmd_l, Buf, sizeof(McuSetPidSpeedCommand));
+        MOTOR_Set_Temporary_Pid_Speed(cmd_l.pid_speed[0], cmd_l.pid_speed[1], cmd_l.pid_speed[2]);
+        break;
+      case MCU_GET_PID_COMMAND_TYPE:
+        McuPid pid = {0};
+        pid.header1 = MCU_HEADER1;
+        pid.header2 = MCU_HEADER2;
+        pid.header3 = MCU_HEADER3;
+        pid.header4 = MCU_HEADER4;
+        pid.type = MCU_PID_TYPE;
+        for(int level = 0; level < PID_LEVEL; level++)
         {
-          pid.pid_speed[level] = MOTOR_Get_Pid_Speed(level);
-          pid.p[level][motor] = MOTOR_Get_Pid(motor, level, 0);
-          pid.i[level][motor] = MOTOR_Get_Pid(motor, level, 1);
-          pid.d[level][motor] = MOTOR_Get_Pid(motor, level, 2);
+          for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
+          {
+            pid.pid_speed[level] = MOTOR_Get_Pid_Speed(level);
+            pid.p[level][motor] = MOTOR_Get_Pid(motor, level, 0);
+            pid.i[level][motor] = MOTOR_Get_Pid(motor, level, 1);
+            pid.d[level][motor] = MOTOR_Get_Pid(motor, level, 2);
+          }
         }
-      }
-      for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
-      {
-        pid.motors_maximum_speed[motor] = MOTOR_Get_Maximum_Speed(motor);
-      }
-      CDC_Transmit_FS((uint8_t*) &pid, sizeof(McuPid));
-      break;
-    case MCU_SET_PID_COMMAND_TYPE:
-      McuSetPidCommand cmd_q = {0};
-      memcpy(&cmd_q, Buf, sizeof(McuSetPidCommand));
-      MOTOR_Set_Temporary_Pid(cmd_q.motor, cmd_q.level, cmd_q.p, cmd_q.i, cmd_q.d);
-      break;
-    case MCU_SAVE_PID_COMMAND_TYPE:
-      MOTOR_Save_Pid();
-      break;
-    case MCU_SET_MOTOR_MAXIMUM_SPEED_COMMAND_TYPE:
-      McuSetMotorMaximumSpeedCommand cmd_u = {0};
-      memcpy(&cmd_u, Buf, sizeof(McuSetMotorMaximumSpeedCommand));
-      MOTOR_Set_Temporary_Maximum_Speed(cmd_u.speed[0], cmd_u.speed[1], cmd_u.speed[2], cmd_u.speed[3]);
-      MOTOR_Set_Ik(0, 0, 0);
-      break;
-    case MCU_GET_SERIAL_NUMBER_COMMAND_TYPE:
-      McuSerialNumber serial_number = {0};
-      serial_number.header1 = MCU_HEADER1;
-      serial_number.header2 = MCU_HEADER2;
-      serial_number.header3 = MCU_HEADER3;
-      serial_number.header4 = MCU_HEADER4;
-      serial_number.type = MCU_SERIAL_NUMBER_TYPE;
-      serial_number.serial_number1 = HAL_GetUIDw0() + HAL_GetUIDw2();
-      serial_number.serial_number2 = HAL_GetUIDw1();
-      serial_number.serial_number3 = HAL_GetUIDw2();
-      CDC_Transmit_FS((uint8_t*) &serial_number, sizeof(McuSerialNumber));
-      break;
-    case MCU_RESET_TRANSFORM_COMMAND_TYPE:
-      MOTOR_Reset_Transform();
-      break;
-    default:
-      break;
+        for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
+        {
+          pid.motors_maximum_speed[motor] = MOTOR_Get_Maximum_Speed(motor);
+        }
+        CDC_Transmit_FS((uint8_t*) &pid, sizeof(McuPid));
+        break;
+      case MCU_SET_PID_COMMAND_TYPE:
+        McuSetPidCommand cmd_q = {0};
+        memcpy(&cmd_q, Buf, sizeof(McuSetPidCommand));
+        MOTOR_Set_Temporary_Pid(cmd_q.motor, cmd_q.level, cmd_q.p, cmd_q.i, cmd_q.d);
+        break;
+      case MCU_SAVE_PID_COMMAND_TYPE:
+        MOTOR_Save_Pid();
+        break;
+      case MCU_SET_MOTOR_MAXIMUM_SPEED_COMMAND_TYPE:
+        McuSetMotorMaximumSpeedCommand cmd_u = {0};
+        memcpy(&cmd_u, Buf, sizeof(McuSetMotorMaximumSpeedCommand));
+        MOTOR_Set_Temporary_Maximum_Speed(cmd_u.speed[0], cmd_u.speed[1], cmd_u.speed[2], cmd_u.speed[3]);
+        MOTOR_Set_Ik(0, 0, 0);
+        break;
+      case MCU_GET_SERIAL_NUMBER_COMMAND_TYPE:
+        McuSerialNumber serial_number = {0};
+        serial_number.header1 = MCU_HEADER1;
+        serial_number.header2 = MCU_HEADER2;
+        serial_number.header3 = MCU_HEADER3;
+        serial_number.header4 = MCU_HEADER4;
+        serial_number.type = MCU_SERIAL_NUMBER_TYPE;
+        serial_number.serial_number1 = HAL_GetUIDw0() + HAL_GetUIDw2();
+        serial_number.serial_number2 = HAL_GetUIDw1();
+        serial_number.serial_number3 = HAL_GetUIDw2();
+        CDC_Transmit_FS((uint8_t*) &serial_number, sizeof(McuSerialNumber));
+        break;
+      case MCU_RESET_TRANSFORM_COMMAND_TYPE:
+        MOTOR_Reset_Transform();
+        break;
+      default:
+        break;
+    } 
   }
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
