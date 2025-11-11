@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2022 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -22,8 +22,11 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-#include <string.h>
+#include "lgdxrobot2.h"
 #include "motor.h"
+#include "stm32f4xx_hal.h"
+#include "usbd_desc.h"
+
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -32,10 +35,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-uint32_t motor = 0, kp = 0, ki = 0, kd = 0;
-uint32_t vx = 0, vy = 0, vw = 0;
-uint32_t ax = 0, ay = 0, az= 0, gz = 0;
-uint32_t enable = 0;
+
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -132,23 +132,6 @@ static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
 static int8_t CDC_TransmitCplt_FS(uint8_t *pbuf, uint32_t *Len, uint8_t epnum);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
-void Write_Uint32(uint32_t value, uint8_t *msb, uint8_t *byte2, uint8_t *byte3, uint8_t *lsb)
-{
-	*msb = (value & 4278190080) >> 24;
-	*byte2 = (value & 16711680) >> 16;
-	*byte3 = (value & 65280) >> 8;
-	*lsb = value & 255;
-}
-
-float Uint32_To_Float(uint32_t n)
-{
-  return (float)(*(float*)&n);
-}
-
-uint32_t Combine_Byte(uint32_t a, uint32_t b, uint32_t c, uint32_t d) 
-{
-  return a << 24 | b << 16 | c << 8 | d;
-}
 
 /* USER CODE END PRIVATE_FUNCTIONS_DECLARATION */
 
@@ -282,96 +265,86 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
-	switch(Buf[0])
-	{
-		case 'E':
-			/*
-			 * Software E-Stop, expect 1 int variables, the length is 5 bytes
-			 */
-			if (*Len != 5)
-				break;
-			enable = Combine_Byte((uint8_t) Buf[1], (uint8_t) Buf[2], (uint8_t) Buf[3], (uint8_t) Buf[4]);
-			MOTOR_Set_Software_E_Stop(enable != 0);
-			break;
-		case 'I':
-			/*
-			 * External IMU Data, expect 4 int variables, the length is 17 bytes
-			 */
-			if (*Len != 17)
-				break;
-			ax = Combine_Byte((uint8_t) Buf[1], (uint8_t) Buf[2], (uint8_t) Buf[3], (uint8_t) Buf[4]);
-			ay = Combine_Byte((uint8_t) Buf[5], (uint8_t) Buf[6], (uint8_t) Buf[7], (uint8_t) Buf[8]);
-			az = Combine_Byte((uint8_t) Buf[9], (uint8_t) Buf[10], (uint8_t) Buf[11], (uint8_t) Buf[12]);
-			gz = Combine_Byte((uint8_t) Buf[13], (uint8_t) Buf[14], (uint8_t) Buf[15], (uint8_t) Buf[16]);
-			MOTOR_Set_External_IMU(Uint32_To_Float(ax), Uint32_To_Float(ay), Uint32_To_Float(az), Uint32_To_Float(gz));
-			break;
-		case 'M':
-			/*
-			 * Motor Inverse Kinematics, expect 3 float variables, the length is 13 bytes
-			 */
-			if (*Len != 13)
-				break;
-			vx = Combine_Byte((uint8_t) Buf[1], (uint8_t) Buf[2], (uint8_t) Buf[3], (uint8_t) Buf[4]);
-			vy = Combine_Byte((uint8_t) Buf[5], (uint8_t) Buf[6], (uint8_t) Buf[7], (uint8_t) Buf[8]);
-			vw = Combine_Byte((uint8_t) Buf[9], (uint8_t) Buf[10], (uint8_t) Buf[11], (uint8_t) Buf[12]);
-			MOTOR_Set_Ik(Uint32_To_Float(vx), Uint32_To_Float(vy), Uint32_To_Float(vw));
-			break;
-		case 'P':
-			/*
-			 * Motor PID, expect 4 int variables, the length is 17 bytes
-			 */
-			if (*Len != 17)
-				break;
-			motor = Combine_Byte((uint8_t) Buf[1], (uint8_t) Buf[2], (uint8_t) Buf[3], (uint8_t) Buf[4]);
-			if(motor > 4)
-				break;
-			kp = Combine_Byte((uint8_t) Buf[5], (uint8_t) Buf[6], (uint8_t) Buf[7], (uint8_t) Buf[8]);
-			ki = Combine_Byte((uint8_t) Buf[9], (uint8_t) Buf[10], (uint8_t) Buf[11], (uint8_t) Buf[12]);
-			kd = Combine_Byte((uint8_t) Buf[13], (uint8_t) Buf[14], (uint8_t) Buf[15], (uint8_t) Buf[16]);
-			MOTOR_Set_PID(motor, Uint32_To_Float(kp), Uint32_To_Float(ki), Uint32_To_Float(kd));
-			break;
-    case 'S':
-      /*
-       * Serial Number
-       */
-      if (*Len != 1)
+  if (*Len >= 3 && Buf[0] == MCU_HEADER1 && Buf[1] == MCU_HEADER2)
+  {
+    switch(Buf[2])
+    {
+      case MCU_SOFTWARE_EMERGENCY_STOP_COMMAND_TYPE:
+        McuSoftwareEmergencyStopCommand cmd_e = {0};
+        memcpy(&cmd_e, Buf, sizeof(McuSoftwareEmergencyStopCommand));
+        MOTOR_Set_Emergency_Stop(software_emergency_stop, cmd_e.enable);
         break;
-      uint32_t stm32Uid[3];
-      stm32Uid[0] = HAL_GetUIDw0();
-      stm32Uid[1] = HAL_GetUIDw1();
-      stm32Uid[2] = HAL_GetUIDw2();
-      static uint8_t msg[97] = {'\0'};
-      msg[0] = 0xAB;
-      int index = 1;
-      for(int i = 0; i < 3; i++)
-      {
-        Write_Uint32(stm32Uid[i], &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
-        index += 4;
-      }
-      index++;
-      CDC_Transmit_FS(msg, index);
-      break;
-		case 'T':
-			/*
-			 * Reset transform, the length is 1 byte
-			 */
-			if (*Len != 1)
-				break;
-			MOTOR_Reset_Transform();
-			break;
-		case 'V':
-			/*
-			 * Single Motor Velocity, expect 2 int variables, the length is 9 bytes
-			 */
-			if (*Len != 9)
-				break;
-			motor = Combine_Byte((uint8_t) Buf[1], (uint8_t) Buf[2], (uint8_t) Buf[3], (uint8_t) Buf[4]);
-			if(motor > 4)
-				break;
-			vx = Combine_Byte((uint8_t) Buf[5], (uint8_t) Buf[6], (uint8_t) Buf[7], (uint8_t) Buf[8]);
-			MOTOR_Set_Single_Velocity(motor, Uint32_To_Float(vx));
-			break;
-	}
+      case MCU_INVERSE_KINEMATICS_COMMAND_TYPE:
+        McuInverseKinematicsCommand cmd_i = {0};
+        memcpy(&cmd_i, Buf, sizeof(McuInverseKinematicsCommand));
+        MOTOR_Set_Ik(cmd_i.velocity.x, cmd_i.velocity.y, cmd_i.velocity.rotation);
+        break;
+      case MCU_MOTOR_COMMAND_TYPE:
+        McuMotorCommand cmd_m = {0};
+        memcpy(&cmd_m, Buf, sizeof(McuMotorCommand));
+        MOTOR_Set_Single_Motor(cmd_m.motor, cmd_m.velocity);
+        break;
+      case MCU_SET_PID_SPEED_COMMAND_TYPE:
+        McuSetPidSpeedCommand cmd_l = {0};
+        memcpy(&cmd_l, Buf, sizeof(McuSetPidSpeedCommand));
+        MOTOR_Set_Temporary_Pid_Speed(cmd_l.pid_speed[0], cmd_l.pid_speed[1], cmd_l.pid_speed[2]);
+        break;
+      case MCU_GET_PID_COMMAND_TYPE:
+        McuPid pid = {0};
+        pid.header1 = MCU_HEADER1;
+        pid.header2 = MCU_HEADER2;
+        pid.header3 = MCU_HEADER3;
+        pid.header4 = MCU_HEADER4;
+        pid.type = MCU_PID_TYPE;
+        for(int level = 0; level < PID_LEVEL; level++)
+        {
+          for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
+          {
+            pid.pid_speed[level] = MOTOR_Get_Pid_Speed(level);
+            pid.p[level][motor] = MOTOR_Get_Pid(motor, level, 0);
+            pid.i[level][motor] = MOTOR_Get_Pid(motor, level, 1);
+            pid.d[level][motor] = MOTOR_Get_Pid(motor, level, 2);
+          }
+        }
+        for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
+        {
+          pid.motors_maximum_speed[motor] = MOTOR_Get_Maximum_Speed(motor);
+        }
+        CDC_Transmit_FS((uint8_t*) &pid, sizeof(McuPid));
+        break;
+      case MCU_SET_PID_COMMAND_TYPE:
+        McuSetPidCommand cmd_q = {0};
+        memcpy(&cmd_q, Buf, sizeof(McuSetPidCommand));
+        MOTOR_Set_Temporary_Pid(cmd_q.motor, cmd_q.level, cmd_q.p, cmd_q.i, cmd_q.d);
+        break;
+      case MCU_SAVE_PID_COMMAND_TYPE:
+        MOTOR_Save_Pid();
+        break;
+      case MCU_SET_MOTOR_MAXIMUM_SPEED_COMMAND_TYPE:
+        McuSetMotorMaximumSpeedCommand cmd_u = {0};
+        memcpy(&cmd_u, Buf, sizeof(McuSetMotorMaximumSpeedCommand));
+        MOTOR_Set_Temporary_Maximum_Speed(cmd_u.speed[0], cmd_u.speed[1], cmd_u.speed[2], cmd_u.speed[3]);
+        MOTOR_Set_Ik(0, 0, 0);
+        break;
+      case MCU_GET_SERIAL_NUMBER_COMMAND_TYPE:
+        McuSerialNumber serial_number = {0};
+        serial_number.header1 = MCU_HEADER1;
+        serial_number.header2 = MCU_HEADER2;
+        serial_number.header3 = MCU_HEADER3;
+        serial_number.header4 = MCU_HEADER4;
+        serial_number.type = MCU_SERIAL_NUMBER_TYPE;
+        serial_number.serial_number1 = HAL_GetUIDw0() + HAL_GetUIDw2();
+        serial_number.serial_number2 = HAL_GetUIDw1();
+        serial_number.serial_number3 = HAL_GetUIDw2();
+        CDC_Transmit_FS((uint8_t*) &serial_number, sizeof(McuSerialNumber));
+        break;
+      case MCU_RESET_TRANSFORM_COMMAND_TYPE:
+        MOTOR_Reset_Transform();
+        break;
+      default:
+        break;
+    } 
+  }
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
   return (USBD_OK);

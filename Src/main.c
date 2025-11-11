@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2022 STMicroelectronics.
+  * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -22,8 +22,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "usbd_cdc_if.h"
+#include "configuation.h"
 #include "motor.h"
+#include "usbd_cdc_if.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,6 +35,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -51,17 +54,24 @@ TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim9;
 
 /* USER CODE BEGIN PV */
-// INA219
-enum __battery {
+// Data
+McuData mcu_data = {0};
+
+// Power Monitoring
+enum __batteries {
+  logic_battery = 0,
   actuator_battery,
-  logic_battery,
 	battery_count
-} battery;
-int currentIna219 = 0;
-const uint16_t ina219Addr[battery_count] = {0x80, 0x82};
-uint8_t ina219VoltageRegister[1] = {0x02};
-uint8_t ina219VoltageData[battery_count] = {0x00, 0x00};
-uint16_t ina219VoltageValue[battery_count] = {0, 0};
+} batteries;
+uint8_t power_monitoring_data[2] = {0x00, 0x00};
+uint8_t power_monitoring_registers[2] = {0x02, 0x04}; // Volrage and Current
+const uint16_t power_monitor_address[battery_count] = {0x40 << 1, 0x41 << 1};
+int current_monitoring_battery = logic_battery;
+int current_monitoring_register = 0;
+McuPower power_monitoring_values[battery_count] = {0};
+#define actuator_battery_current_history_size 20
+float actuator_battery_current_history[actuator_battery_current_history_size] = {0};
+int actuator_battery_current_history_index = 0;
 
 /* USER CODE END PV */
 
@@ -81,99 +91,102 @@ static void MX_TIM9_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint32_t Float_To_Uint32(float n)
+void Handling_Mcu_Data()
 {
-  return (uint32_t)(*(uint32_t*)&n);
+  mcu_data.header1 = MCU_HEADER1;
+  mcu_data.header2 = MCU_HEADER2;
+  mcu_data.header3 = MCU_HEADER3;
+  mcu_data.header4 = MCU_HEADER4;
+  mcu_data.type = MCU_DATA_TYPE;
+  mcu_data.response_time = MOTOR_Get_Pid_Elapsed();
+  mcu_data.transform.x = MOTOR_Get_Transform(0);
+  mcu_data.transform.y = MOTOR_Get_Transform(1);
+  mcu_data.transform.rotation = MOTOR_Get_Transform(2);
+  mcu_data.forward_kinematic.x = MOTOR_Get_Forward_Kinematic(0);
+  mcu_data.forward_kinematic.y = MOTOR_Get_Forward_Kinematic(1);
+  mcu_data.forward_kinematic.rotation = MOTOR_Get_Forward_Kinematic(2);
+  for (int i = 0; i < API_MOTOR_COUNT; i++)
+  {
+    mcu_data.motors_target_velocity[i] = MOTOR_Get_Target_Velocity(i);
+    mcu_data.motors_actual_velocity[i] = MOTOR_Get_Actual_Velocity(i);
+    mcu_data.motors_desire_velocity[i] = MOTOR_Get_Desired_Velocity(i);
+  }
+  mcu_data.motors_ccr[0] = TIM2->CCR1;
+  mcu_data.motors_ccr[1] = TIM2->CCR2;
+  mcu_data.motors_ccr[2] = TIM2->CCR4;
+  mcu_data.motors_ccr[3] = TIM2->CCR3;
+  mcu_data.battery1 = power_monitoring_values[logic_battery];
+  mcu_data.battery2 = power_monitoring_values[actuator_battery];
+  mcu_data.software_emergency_stop_enabled = MOTOR_Get_Emergency_Stop_Status(software_emergency_stop);
+  mcu_data.hardware_emergency_stop_enabled = MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop);
+  mcu_data.bettery_low_emergency_stop_enabled = MOTOR_Get_Emergency_Stop_Status(bettery_low_emergency_stop);
+  CDC_Transmit_FS((uint8_t*) &mcu_data, sizeof(McuData));
 }
 
-extern void Write_Uint32(uint32_t value, uint8_t *msb, uint8_t *byte2, uint8_t *byte3, uint8_t *lsb);
-
-void Broadcast_Status()
+void Start_Power_Monitoring()
 {
-	static uint8_t msg[128] = {'\0'};
-	msg[0] = 0xAA;
-  msg[1] = 1;
-	int index = 3;
-	uint16_t time = MOTOR_Get_PID_elapsed(); // 32 bit to 16 bit
-	msg[index++] = (time & 65280) >> 8;
-	msg[index++] = time & 255;
-	for(int i = 0; i < 3; i++)
-	{
-		uint32_t temp = Float_To_Uint32(MOTOR_Get_Transform(i));
-		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
-		index += 4;
-	}
-	for(int i = 0; i < 3; i++)
-	{
-		uint32_t temp = Float_To_Uint32(MOTOR_Get_Fk(i));
-		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
-		index += 4;
-	}
-	for(int i = 0; i < WHEEL_COUNT; i++)
-	{
-		uint32_t temp = Float_To_Uint32(MOTOR_Get_Target_Velocity(i));
-		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
-		index += 4;
-	}
-	for(int i = 0; i < WHEEL_COUNT; i++)
-	{
-		uint32_t temp = Float_To_Uint32(MOTOR_Get_Velocity(i));
-		Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
-		index += 4;
-	}
-	for(int i = 0; i < 3; i++)
-	{
-		for(int j = 0; j < WHEEL_COUNT; j++)
-		{
-			uint32_t temp = Float_To_Uint32(MOTOR_Get_PID(i, j));
-			Write_Uint32(temp, &msg[index], &msg[index + 1], &msg[index + 2], &msg[index + 3]);
-			index += 4;
-		}
-	}
-	for(int i = 0; i < 2; i++)
-	{
-		msg[index++] = (ina219VoltageValue[i] & 65280) >> 8;
-		msg[index++] = ina219VoltageValue[i] & 255;
-	}
-	msg[index] = 0;
-	for(int i = 0; i < 2; i++)
-	{
-		bool temp = MOTOR_Get_E_Stop_Status(i);
-		if(temp)
-			msg[index] |= 1 << (7 - i);
-	}
-	index++;
-	// Final: Size
-	msg[2] = index;
-	CDC_Transmit_FS(msg, index);
+  // Start I2C Interrupt
+  HAL_I2C_Mem_Read_IT(&hi2c1, power_monitor_address[current_monitoring_battery], power_monitoring_registers[current_monitoring_register], 1, power_monitoring_data, 2);
 }
 
-void Update_Ina219()
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
-	// Initalise INA219 Communication
-	HAL_I2C_Master_Transmit_IT(&hi2c1, ina219Addr[currentIna219], ina219VoltageRegister, 1);
-}
-
-void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
-{
-  // Sent Data To INA219
 	if(hi2c->Instance == hi2c1.Instance) 
 	{
-		HAL_I2C_Master_Receive_IT(&hi2c1, ina219Addr[currentIna219], ina219VoltageData, 2);
-	}
-}
+		uint16_t result = (power_monitoring_data[0] << 8) | power_monitoring_data[1];
 
-void HAL_I2C_MasterRxCpltCallback (I2C_HandleTypeDef *hi2c)
-{
-  // Received Data From INA219
-	if(hi2c->Instance == hi2c1.Instance) 
-	{
-		ina219VoltageValue[currentIna219] = (ina219VoltageData[0] << 8 | ina219VoltageData[1]) >> 3;
-		if(ina219VoltageValue[actuator_battery] < 1500) // Lower than 6V
-			MOTOR_Set_Hardware_E_Stop(1);
-		else
-			MOTOR_Set_Hardware_E_Stop(0);
-		currentIna219 = (currentIna219 == actuator_battery ? logic_battery : actuator_battery);
+    // Convert the power data
+    if (current_monitoring_register == 0)
+    {
+      // Voltage
+      float voltage = result * 0.00125;
+
+      if (current_monitoring_battery == actuator_battery)
+      {
+        // Voltage Lower than a threshold -> Battery low
+        if (voltage < POWER_MINIMUM_VOLTAGE && !MOTOR_Get_Emergency_Stop_Status(bettery_low_emergency_stop))
+          MOTOR_Set_Emergency_Stop(bettery_low_emergency_stop, true);
+        else if (voltage >= POWER_MINIMUM_VOLTAGE && MOTOR_Get_Emergency_Stop_Status(bettery_low_emergency_stop))
+          MOTOR_Set_Emergency_Stop(bettery_low_emergency_stop, false);
+      }
+
+      power_monitoring_values[current_monitoring_battery].voltage = result * 0.00125;
+    }
+    else
+    {
+      // Current
+      float current = result * 0.001;
+
+      if (current_monitoring_battery == actuator_battery)
+      {
+        actuator_battery_current_history[actuator_battery_current_history_index++] = current;
+        actuator_battery_current_history_index %= 10;
+
+        float average_current = 0;
+        for (int i = 0; i < actuator_battery_current_history_size; i++)
+          average_current += actuator_battery_current_history[i];
+        average_current /= actuator_battery_current_history_size;
+
+        // If the current exceeds the threshold, the connection is terminated by an emergency stop in the actuator battery.
+        if (average_current > POWER_MAXIMUM_CURRENT && !MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop))
+          MOTOR_Set_Emergency_Stop(hardware_emergency_stop, true);
+        else if (average_current <= POWER_MAXIMUM_CURRENT && MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop))
+          MOTOR_Set_Emergency_Stop(hardware_emergency_stop, false);
+      }
+
+      if (current > POWER_MAXIMUM_CURRENT)
+        current = 0.0f;
+      power_monitoring_values[current_monitoring_battery].current = current;
+    }
+
+    // Switch to the next data
+    current_monitoring_register++;
+    if (current_monitoring_register >= 2)
+    {
+      current_monitoring_register = 0;
+      current_monitoring_battery = (current_monitoring_battery == 1) ? 0 : 1;
+    }
+    Start_Power_Monitoring();
 	}
 }
 
@@ -182,8 +195,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if(htim->Instance == htim9.Instance)
 	{
 		MOTOR_PID();
-		Broadcast_Status();
-		Update_Ina219();
+    Handling_Mcu_Data();
 	}
 }
 
@@ -224,17 +236,30 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_TIM5_Init();
-  MX_USB_DEVICE_Init();
   MX_TIM9_Init();
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
-	MOTOR_Init(&htim2, &htim1, &htim3, &htim4, &htim5);
+  // Setup Power Monitoring
+  #ifdef ENABLE_POWER_MONITORING
+  uint8_t calibration_data[2] = {0x0A, 0x00};
+  for (int i = 0; i < battery_count; i++)
+  {
+    HAL_I2C_Mem_Write(&hi2c1, power_monitor_address[i], 0x05, 1, calibration_data, 2, 1000);
+  }
+  Start_Power_Monitoring();
+  #endif
+  // Setup Motors
+  MOTOR_Init(&htim2, &htim3, &htim4, &htim5, &htim1);
 	HAL_TIM_Base_Start_IT(&htim9);
+  MOTOR_Reset_Transform();
+  MOTOR_Set_Ik(0, 0, 0);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
-  {		
+  {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -565,7 +590,7 @@ static void MX_TIM5_Init(void)
   htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
-  sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
+  sConfig.IC1Polarity = TIM_ICPOLARITY_FALLING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
   sConfig.IC1Filter = 10;
@@ -636,6 +661,7 @@ static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
+
   /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
@@ -645,50 +671,40 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, D_STBY_Pin|M3_IN2_Pin|M3_IN1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, DR2BIN1_Pin|DR2BIN2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, L_GREEN_Pin|L_RED_Pin|BT1_SW_Pin|M1_IN2_Pin
-                          |M1_IN1_Pin|M2_IN1_Pin|M2_IN2_Pin|M4_IN1_Pin
-                          |M4_IN2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, DR1AIN2_Pin|D2_Pin|RS1_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PC13 PC14 PC15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, DR1AIN1_Pin|DRxSTBY_Pin|DR1BIN1_Pin|DR1BIN2_Pin
+                          |D1_Pin|DR2AIN1_Pin|DR2AIN2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : DR2BIN1_Pin DR2BIN2_Pin */
+  GPIO_InitStruct.Pin = DR2BIN1_Pin|DR2BIN2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : D_STBY_Pin M3_IN2_Pin M3_IN1_Pin */
-  GPIO_InitStruct.Pin = D_STBY_Pin|M3_IN2_Pin|M3_IN1_Pin;
+  /*Configure GPIO pins : DR1AIN2_Pin D2_Pin RS1_Pin */
+  GPIO_InitStruct.Pin = DR1AIN2_Pin|D2_Pin|RS1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : L_GREEN_Pin L_RED_Pin BT1_SW_Pin M1_IN2_Pin
-                           M1_IN1_Pin M2_IN1_Pin M2_IN2_Pin M4_IN1_Pin
-                           M4_IN2_Pin */
-  GPIO_InitStruct.Pin = L_GREEN_Pin|L_RED_Pin|BT1_SW_Pin|M1_IN2_Pin
-                          |M1_IN1_Pin|M2_IN1_Pin|M2_IN2_Pin|M4_IN1_Pin
-                          |M4_IN2_Pin;
+  /*Configure GPIO pins : DR1AIN1_Pin DRxSTBY_Pin DR1BIN1_Pin DR1BIN2_Pin
+                           D1_Pin DR2AIN1_Pin DR2AIN2_Pin */
+  GPIO_InitStruct.Pin = DR1AIN1_Pin|DRxSTBY_Pin|DR1BIN1_Pin|DR1BIN2_Pin
+                          |D1_Pin|DR2AIN1_Pin|DR2AIN2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PA13 PA14 */
-  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
+
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
@@ -710,8 +726,7 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.

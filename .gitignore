@@ -1,18 +1,28 @@
-/Drivers/**
-/MDK-ARM/**
-/Middlewares/**
-.mxproject
-Chassis2.txt
-.DS_Store
+# === Build Artifacts ===
 build/**
 cmake/**
-CmakeFiles/**
-.vscode/**
+CMakeFiles/**
+.cache/
 build.ninja
 cmake_install.cmake
 CMakeCache.txt
 CMakePresets.json
 compile_commands.json
+
+# === IDE / Editor Files ===
+.vscode/**
+.DS_Store
+
+# === STM32 / Toolchain Generated Files ===
+/Drivers/**
+/Middlewares/**
+/MDK-ARM/**
+.mxproject
+
+# === Linker & Startup Files (Usually regenerated) ===
 startup_stm32f411xe.s
 stm32f411ceux_flash.ld
 STM32F411XX_FLASH.ld
+
+# === Miscellaneous ===
+Chassis2.txt
