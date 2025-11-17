@@ -1,0 +1,89 @@
+# LGDXRobot2 MCU GitLab CI/CD
+
+stages:
+  - prepare
+  - build
+  - release
+
+#
+# Prepare
+#
+
+prepare:
+  stage: prepare
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never 
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  image: alpine:latest
+  script:
+    - apk add libxml2-utils
+    - echo "APP_VERSION=$(grep 'project(' CMakeLists.txt | awk -F'VERSION' '{print $2}' | awk '{print $1}')" >> variables.env
+  artifacts:
+    reports:
+      dotenv: variables.env
+
+#
+# Build 
+#
+
+build:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never 
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  when: manual
+  image: ubuntu:24.04
+  before_script:
+    - apt update
+    - apt install -y --no-install-recommends cmake ninja-build gcc-arm-none-eabi
+  script:
+    - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=./cmake/gcc-arm-none-eabi.cmake -S ./ -B ./build/Release -G Ninja
+    - cmake --build ./build/Release
+    - mv ./build/Release/LGDXRobot2.elf ./LGDXRobot2.elf
+  artifacts:
+    paths:
+      - LGDXRobot2.elf
+
+
+#
+# Release
+#
+
+release:
+  stage: release
+  image: alpine:latest
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: never 
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  needs:
+    - job: prepare
+      artifacts: true
+    - job: build-arm64
+      artifacts: true
+    - job: build-amd64
+      artifacts: true
+  before_script:
+    - apk add glab
+    - apk add gitlab-release-cli  
+    - apk add curl
+  script:
+    - |
+      curl --location --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+           --upload-file LGDXRobot2.elf \
+           "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/latest/LGDXRobot2.elf"
+    - |
+      curl --location --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+           --upload-file LGDXRobot2.elf \
+           "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/${APP_VERSION}/LGDXRobot2.elf"
+  release:
+    name : 'Release $APP_VERSION'
+    tag_name: '$APP_VERSION'
+    description: '$APP_VERSION'
+    ref: '$CI_COMMIT_SHA'
+    assets:
+      links:
+        - name: 'Download LGDXRobot2.elf'
+          url: '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/${APP_VERSION}/LGDXRobot2.elf'

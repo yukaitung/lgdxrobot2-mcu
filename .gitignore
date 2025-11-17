@@ -1,6 +1,5 @@
 # === Build Artifacts ===
 build/**
-cmake/**
 CMakeFiles/**
 .cache/
 build.ninja
