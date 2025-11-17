@@ -46,7 +46,6 @@ build:
     paths:
       - LGDXRobot2.elf
 
-
 #
 # Release
 #
@@ -61,9 +60,7 @@ release:
   needs:
     - job: prepare
       artifacts: true
-    - job: build-arm64
-      artifacts: true
-    - job: build-amd64
+    - job: build
       artifacts: true
   before_script:
     - apk add glab
