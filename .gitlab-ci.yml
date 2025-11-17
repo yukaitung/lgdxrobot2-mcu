@@ -17,10 +17,11 @@ prepare:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   image: alpine:latest
   script:
-    - cat version.txt >> variables.env
+    - echo "APP_VERSION=$(cat version.txt)" >> variables.env
   artifacts:
     reports:
       dotenv: variables.env
+    expire_in: 1 day
 
 #
 # Build 
@@ -43,6 +44,7 @@ build:
   artifacts:
     paths:
       - LGDXRobot2.elf
+    expire_in: 1 day
 
 #
 # Release
