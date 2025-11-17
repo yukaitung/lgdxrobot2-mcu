@@ -68,10 +68,6 @@ release:
     - |
       curl --location --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
            --upload-file LGDXRobot2.elf \
-           "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/latest/LGDXRobot2.elf"
-    - |
-      curl --location --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
-           --upload-file LGDXRobot2.elf \
            "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/${APP_VERSION}/LGDXRobot2.elf"
   release:
     name : 'Release $APP_VERSION'
