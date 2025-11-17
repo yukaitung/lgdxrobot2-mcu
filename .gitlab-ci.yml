@@ -17,7 +17,7 @@ prepare:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   image: alpine:latest
   script:
-    - echo "APP_VERSION=$(grep 'project(' CMakeLists.txt | awk -F'VERSION' '{print $2}' | awk '{print $1}')" >> variables.env
+    - cat version.txt >> variables.env
   artifacts:
     reports:
       dotenv: variables.env
