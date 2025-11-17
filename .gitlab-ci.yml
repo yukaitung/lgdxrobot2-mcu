@@ -17,7 +17,6 @@ prepare:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   image: alpine:latest
   script:
-    - apk add libxml2-utils
     - echo "APP_VERSION=$(grep 'project(' CMakeLists.txt | awk -F'VERSION' '{print $2}' | awk '{print $1}')" >> variables.env
   artifacts:
     reports:
@@ -36,7 +35,7 @@ build:
   image: ubuntu:24.04
   before_script:
     - apt update
-    - apt install -y --no-install-recommends cmake ninja-build gcc-arm-none-eabi libc6-dev
+    - apt install -y --no-install-recommends cmake ninja-build gcc-arm-none-eabi libnewlib-arm-none-eabi
   script:
     - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=./cmake/gcc-arm-none-eabi.cmake -S ./ -B ./build/Release -G Ninja
     - cmake --build ./build/Release
