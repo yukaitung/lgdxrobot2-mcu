@@ -33,11 +33,10 @@ build:
     - if: $CI_COMMIT_TAG
       when: never 
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  when: manual
   image: ubuntu:24.04
   before_script:
     - apt update
-    - apt install -y --no-install-recommends cmake ninja-build gcc-arm-none-eabi
+    - apt install -y --no-install-recommends cmake ninja-build gcc-arm-none-eabi libc6-dev
   script:
     - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=./cmake/gcc-arm-none-eabi.cmake -S ./ -B ./build/Release -G Ninja
     - cmake --build ./build/Release
