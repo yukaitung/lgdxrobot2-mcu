@@ -242,11 +242,11 @@ void _read_pid_from_flash()
 	}
 }
 
-void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *e1_htim, TIM_HandleTypeDef *e2_htim, TIM_HandleTypeDef *e3_htim, TIM_HandleTypeDef *e4_htim)
+void MOTOR_Init(TIM_HandleTypeDef *pwm_htim1, TIM_HandleTypeDef *e1_htim, TIM_HandleTypeDef *e2_htim, TIM_HandleTypeDef *e3_htim, TIM_HandleTypeDef *e4_htim)
 {
 	_read_pid_from_flash();
 
-	pwm_htim = pwm_htim;
+	pwm_htim = pwm_htim1;
 	encoders_htim[0] = e1_htim;
 	encoders_htim[1] = e2_htim;
 	encoders_htim[2] = e3_htim;

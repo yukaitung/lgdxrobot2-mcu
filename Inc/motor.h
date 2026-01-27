@@ -12,7 +12,7 @@ enum __emergency_stops {
 	emergency_stops_count = 3
 };
 
-void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *e1_htim, TIM_HandleTypeDef *e2_htim, TIM_HandleTypeDef *e3_htim, TIM_HandleTypeDef *e4_htim);
+void MOTOR_Init(TIM_HandleTypeDef *pwm_htim1, TIM_HandleTypeDef *e1_htim, TIM_HandleTypeDef *e2_htim, TIM_HandleTypeDef *e3_htim, TIM_HandleTypeDef *e4_htim);
 uint32_t MOTOR_Get_Pid_Elapsed();
 float MOTOR_Get_Transform(int axis);
 float MOTOR_Get_Forward_Kinematic(int axis);
