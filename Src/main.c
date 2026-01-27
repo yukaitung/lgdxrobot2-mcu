@@ -126,73 +126,6 @@ void Handling_Mcu_Data()
   CDC_Transmit_FS((uint8_t*) &mcu_data, sizeof(McuData));
 }
 
-void Start_Power_Monitoring()
-{
-  // Start I2C Interrupt
-  HAL_I2C_Mem_Read_IT(&hi2c1, power_monitor_address[current_monitoring_battery], power_monitoring_registers[current_monitoring_register], 1, power_monitoring_data, 2);
-}
-
-void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
-{
-	if(hi2c->Instance == hi2c1.Instance) 
-	{
-		uint16_t result = (power_monitoring_data[0] << 8) | power_monitoring_data[1];
-
-    // Convert the power data
-    if (current_monitoring_register == 0)
-    {
-      // Voltage
-      float voltage = result * 0.00125;
-
-      if (current_monitoring_battery == actuator_battery)
-      {
-        // Voltage Lower than a threshold -> Battery low
-        if (voltage < POWER_MINIMUM_VOLTAGE && !MOTOR_Get_Emergency_Stop_Status(bettery_low_emergency_stop))
-          MOTOR_Set_Emergency_Stop(bettery_low_emergency_stop, true);
-        else if (voltage >= POWER_MINIMUM_VOLTAGE && MOTOR_Get_Emergency_Stop_Status(bettery_low_emergency_stop))
-          MOTOR_Set_Emergency_Stop(bettery_low_emergency_stop, false);
-      }
-
-      power_monitoring_values[current_monitoring_battery].voltage = result * 0.00125;
-    }
-    else
-    {
-      // Current
-      float current = result * 0.001;
-
-      if (current_monitoring_battery == actuator_battery)
-      {
-        actuator_battery_current_history[actuator_battery_current_history_index++] = current;
-        actuator_battery_current_history_index %= 10;
-
-        float average_current = 0;
-        for (int i = 0; i < actuator_battery_current_history_size; i++)
-          average_current += actuator_battery_current_history[i];
-        average_current /= actuator_battery_current_history_size;
-
-        // If the current exceeds the threshold, the connection is terminated by an emergency stop in the actuator battery.
-        if (average_current > POWER_MAXIMUM_CURRENT && !MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop))
-          MOTOR_Set_Emergency_Stop(hardware_emergency_stop, true);
-        else if (average_current <= POWER_MAXIMUM_CURRENT && MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop))
-          MOTOR_Set_Emergency_Stop(hardware_emergency_stop, false);
-      }
-
-      if (current > POWER_MAXIMUM_CURRENT)
-        current = 0.0f;
-      power_monitoring_values[current_monitoring_battery].current = current;
-    }
-
-    // Switch to the next data
-    current_monitoring_register++;
-    if (current_monitoring_register >= 2)
-    {
-      current_monitoring_register = 0;
-      current_monitoring_battery = (current_monitoring_battery == 1) ? 0 : 1;
-    }
-    Start_Power_Monitoring();
-	}
-}
-
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim->Instance == htim9.Instance)
@@ -243,15 +176,6 @@ int main(void)
   MX_ADC1_Init();
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
-  // Setup Power Monitoring
-  #ifdef ENABLE_POWER_MONITORING
-  uint8_t calibration_data[2] = {0x0A, 0x00};
-  for (int i = 0; i < battery_count; i++)
-  {
-    HAL_I2C_Mem_Write(&hi2c1, power_monitor_address[i], 0x05, 1, calibration_data, 2, 1000);
-  }
-  Start_Power_Monitoring();
-  #endif
   // Setup Motors
   MOTOR_Init(&htim2, &htim3, &htim4, &htim5, &htim1);
 	HAL_TIM_Base_Start_IT(&htim9);
@@ -650,7 +574,7 @@ static void MX_TIM5_Init(void)
   htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
-  sConfig.IC1Polarity = TIM_ICPOLARITY_FALLING;
+  sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
   sConfig.IC1Filter = 10;
@@ -734,7 +658,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, DR2BIN2_Pin|DR1AIN2_Pin|DR1AIN1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, DRxSTBY_Pin|DR1BIN1_Pin|DR1BIN2_Pin|DR2AIN1_Pin
+  HAL_GPIO_WritePin(GPIOB, DRxSTBY_Pin|DR1BIN2_Pin|DR1BIN1_Pin|DR2AIN1_Pin
                           |DR2AIN2_Pin|D1_Pin|RS1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
@@ -747,9 +671,9 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DRxSTBY_Pin DR1BIN1_Pin DR1BIN2_Pin DR2AIN1_Pin
+  /*Configure GPIO pins : DRxSTBY_Pin DR1BIN2_Pin DR1BIN1_Pin DR2AIN1_Pin
                            DR2AIN2_Pin D1_Pin RS1_Pin */
-  GPIO_InitStruct.Pin = DRxSTBY_Pin|DR1BIN1_Pin|DR1BIN2_Pin|DR2AIN1_Pin
+  GPIO_InitStruct.Pin = DRxSTBY_Pin|DR1BIN2_Pin|DR1BIN1_Pin|DR2AIN1_Pin
                           |DR2AIN2_Pin|D1_Pin|RS1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;

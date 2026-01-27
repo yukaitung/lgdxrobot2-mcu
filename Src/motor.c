@@ -80,13 +80,11 @@ void _set_led(bool green)
 {
 	if (green)
 	{
-		HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(D2_GPIO_Port, D2_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_RESET);
 	}
 	else
 	{
-		HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(D2_GPIO_Port, D2_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_SET);
 	}
 }
 
@@ -98,8 +96,7 @@ void _reset_led()
 			return;
 	}
 	HAL_GPIO_WritePin(DRxSTBY_GPIO_Port, DRxSTBY_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(D2_GPIO_Port, D2_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_RESET);
 }
 
 void _set_ccr(int motor, int ccr)
@@ -111,13 +108,13 @@ void _set_ccr(int motor, int ccr)
 	switch(motor)
 	{
 		case 0:
-			TIM2->CCR1 = ccr;
+			TIM2->CCR4 = ccr;
 			break;
 		case 1:
 			TIM2->CCR2 = ccr;
 			break;
 		case 2:
-			TIM2->CCR4 = ccr;
+			TIM2->CCR1 = ccr;
 			break;
 		case 3:
 			TIM2->CCR3 = ccr;
