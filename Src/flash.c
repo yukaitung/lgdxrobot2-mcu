@@ -6,8 +6,6 @@
 #include "flash.h"
 #include "motor.h"
 
-const uint32_t flash_start_address = 0x08040000U;
-
 bool _data_empty = true;
 flash_data _data = {0};
 
@@ -15,8 +13,13 @@ void _read_from_flash()
 {
   if (_data_empty)
   {
-    uint8_t *flash = (uint8_t*)(uintptr_t)flash_start_address;
-	  memcpy(&_data, flash, sizeof(flash_data));
+		flash_data temp_data = {0};
+    uint8_t *flash = (uint8_t*)(uintptr_t)FLAST_START_ADDRESS;
+	  memcpy(&temp_data, flash, sizeof(flash_data));
+		if (temp_data.modified == FLASH_DATA_MODIFIED)
+		{
+			_data = temp_data;
+		}
     _data_empty = false;
   }
 }
@@ -33,7 +36,7 @@ flash_data Flash_Get()
 
 void Flash_Save()
 {
-	_data.modified = MCU_HEADER1;
+	_data.modified = FLASH_DATA_MODIFIED;
   for(int level = 0; level < PID_LEVEL; level++)
 	{
 		for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
@@ -53,7 +56,7 @@ void Flash_Save()
 	FLASH_Erase_Sector(6, FLASH_VOLTAGE_RANGE_3);
 	for(int i = 0; i < sizeof(flash_data); i++)
 	{
-		HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, flash_start_address + i, data[i]);
+		HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, FLAST_START_ADDRESS + i, data[i]);
 	}
 	HAL_FLASH_Lock();
 }

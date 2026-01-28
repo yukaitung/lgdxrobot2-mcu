@@ -1,5 +1,8 @@
 #include "lgdxrobot2.h"
 
+#define FLASH_DATA_MODIFIED 0xAA
+#define FLAST_START_ADDRESS 0x08040000U
+
 typedef struct {
 	float p;
 	float i;

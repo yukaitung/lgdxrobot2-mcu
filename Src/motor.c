@@ -193,21 +193,24 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim1, TIM_HandleTypeDef *e1_htim, TIM_Ha
 	}
 
 	flash_data data = Flash_Get();
-	for(int level = 0; level < PID_LEVEL; level++)
+	if (data.modified == FLASH_DATA_MODIFIED) // If the data is not modified, use the default value
 	{
-		for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
+		for(int level = 0; level < PID_LEVEL; level++)
 		{
-			motors_Kp[level][motor] = data.pid[level][motor].p;
-			motors_Ki[level][motor] = data.pid[level][motor].i;
-			motors_Kd[level][motor] = data.pid[level][motor].d;
+			for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
+			{
+				motors_Kp[level][motor] = data.pid[level][motor].p;
+				motors_Ki[level][motor] = data.pid[level][motor].i;
+				motors_Kd[level][motor] = data.pid[level][motor].d;
+			}
+			pid_speed[level] = data.pid_speed[level];
 		}
-		pid_speed[level] = data.pid_speed[level];
+		for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
+		{
+			motor_max_speed[motor] = data.motors_maximum_speed[motor];
+		}
 	}
-	for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
-	{
-		motor_max_speed[motor] = data.motors_maximum_speed[motor];
-	}
-
+	
 	pid_last_tick = HAL_GetTick();
 	
 	HAL_GPIO_WritePin(RS1_GPIO_Port, RS1_Pin, GPIO_PIN_SET);
