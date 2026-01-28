@@ -1,3 +1,6 @@
+#ifndef __FLASH_H
+#define __FLASH_H
+
 #include "lgdxrobot2.h"
 
 #define FLASH_DATA_MODIFIED 0xAA
@@ -21,3 +24,5 @@ typedef struct {
 
 flash_data Flash_Get();
 void Flash_Save();
+
+#endif

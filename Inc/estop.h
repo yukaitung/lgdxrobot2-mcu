@@ -1,3 +1,6 @@
+#ifndef __ESTOP_H
+#define __ESTOP_H
+
 enum __emergency_stops {
 	software_emergency_stop = 0,
 	hardware_emergency_stop = 1,
@@ -9,3 +12,5 @@ void ESTOP_Init();
 void ESTOP_Enable(int type);
 void ESTOP_Disable(int type);
 bool ESTOP_Get_Status(int type);
+
+#endif
