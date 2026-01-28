@@ -1,13 +1,11 @@
 #include <math.h>
-#include <stdbool.h>
 #include <stdlib.h>
-#include <string.h>
+#include <stdbool.h>
 
 #include "configuation.h"
 #include "main.h"
-#include "stm32f4xx_hal_flash.h"
-#include "stm32f4xx_hal_flash_ex.h"
 #include "motor.h"
+#include "flash.h"
 
 // Constant from motor.h
 PID_SPEED
@@ -39,23 +37,6 @@ uint16_t encoder_last_value[API_MOTOR_COUNT] = {0, 0, 0, 0};
 TIM_HandleTypeDef *pwm_htim;
 TIM_HandleTypeDef *encoders_htim[API_MOTOR_COUNT];
 
-uint32_t flash_start_address = 0x08040000U;
-
-typedef struct {
-	float p;
-	float i;
-	float d;
-} _pid;
-
-#pragma pack(push, 1)
-typedef struct {
-	uint8_t modified;
-	_pid pid[PID_LEVEL][API_MOTOR_COUNT];
-	float pid_speed[PID_LEVEL];
-	float motors_maximum_speed[API_MOTOR_COUNT];
-} _pid_save;
-#pragma pack(pop)
-
 /*
  * Private Functions
  */
@@ -72,8 +53,6 @@ int _safe_unsigned_subtract(int a, int b, int limit)
 		return(limit - a + b);
 	return a - b;
 }
-
-
 
 void _set_ccr(int motor, int ccr)
 {
@@ -193,34 +172,8 @@ void _handle_user_velocity(int motor, float target_velocity)
  * Public Functions
  */
 
-void _read_pid_from_flash()
-{
-	_pid_save pid_save = {0};
-	uint8_t *flash = (uint8_t*)(uintptr_t)flash_start_address;
-	memcpy(&pid_save, flash, sizeof(_pid_save));
-	if (pid_save.modified == MCU_HEADER1)
-	{
-		for(int level = 0; level < PID_LEVEL; level++)
-		{
-			for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
-			{
-				motors_Kp[level][motor] = pid_save.pid[level][motor].p;
-				motors_Ki[level][motor] = pid_save.pid[level][motor].i;
-				motors_Kd[level][motor] = pid_save.pid[level][motor].d;
-			}
-			pid_speed[level] = pid_save.pid_speed[level];
-		}
-		for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
-		{
-			motor_max_speed[motor] = pid_save.motors_maximum_speed[motor];
-		}
-	}
-}
-
 void MOTOR_Init(TIM_HandleTypeDef *pwm_htim1, TIM_HandleTypeDef *e1_htim, TIM_HandleTypeDef *e2_htim, TIM_HandleTypeDef *e3_htim, TIM_HandleTypeDef *e4_htim)
 {
-	_read_pid_from_flash();
-
 	pwm_htim = pwm_htim1;
 	encoders_htim[0] = e1_htim;
 	encoders_htim[1] = e2_htim;
@@ -237,6 +190,22 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim1, TIM_HandleTypeDef *e1_htim, TIM_Ha
 	for(int i = 0; i < API_MOTOR_COUNT; i++)
 	{
 		HAL_TIM_Encoder_Start(encoders_htim[i], TIM_CHANNEL_ALL);
+	}
+
+	flash_data data = Flash_Get();
+	for(int level = 0; level < PID_LEVEL; level++)
+	{
+		for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
+		{
+			motors_Kp[level][motor] = data.pid[level][motor].p;
+			motors_Ki[level][motor] = data.pid[level][motor].i;
+			motors_Kd[level][motor] = data.pid[level][motor].d;
+		}
+		pid_speed[level] = data.pid_speed[level];
+	}
+	for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
+	{
+		motor_max_speed[motor] = data.motors_maximum_speed[motor];
 	}
 
 	pid_last_tick = HAL_GetTick();
@@ -363,34 +332,6 @@ void MOTOR_Set_Temporary_Maximum_Speed(float speed1, float speed2, float speed3,
 	motor_max_speed[1] = speed2;
 	motor_max_speed[2] = speed3;
 	motor_max_speed[3] = speed4;
-}
-
-void MOTOR_Save_Pid()
-{
-	_pid_save pid_save = {0};
-	pid_save.modified = MCU_HEADER1;
-	for(int level = 0; level < PID_LEVEL; level++)
-	{
-		for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
-		{
-			pid_save.pid[level][motor].p = motors_Kp[level][motor];
-			pid_save.pid[level][motor].i = motors_Ki[level][motor];
-			pid_save.pid[level][motor].d = motors_Kd[level][motor];
-		}
-		pid_save.pid_speed[level] = pid_speed[level];
-	}
-	for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
-	{
-		pid_save.motors_maximum_speed[motor] = motor_max_speed[motor];
-	}
-	uint8_t* data = (uint8_t*) &pid_save;
-	HAL_FLASH_Unlock();
-	FLASH_Erase_Sector(6, FLASH_VOLTAGE_RANGE_3);
-	for(int i = 0; i < sizeof(_pid_save); i++)
-	{
-		HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, flash_start_address + i, data[i]);
-	}
-	HAL_FLASH_Lock();
 }
 
 void MOTOR_Reset_Transform()

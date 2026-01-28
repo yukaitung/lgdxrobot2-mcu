@@ -47,6 +47,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Src/main.c
     Src/motor.c
     Src/estop.c
+    Src/flash.c
 )
 
 # Add include paths

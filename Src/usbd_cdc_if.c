@@ -25,6 +25,7 @@
 #include "lgdxrobot2.h"
 #include "motor.h"
 #include "estop.h"
+#include "flash.h"
 #include "stm32f4xx_hal.h"
 #include "usbd_desc.h"
 
@@ -326,7 +327,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
         MOTOR_Set_Temporary_Pid(cmd_q.motor, cmd_q.level, cmd_q.p, cmd_q.i, cmd_q.d);
         break;
       case MCU_SAVE_PID_COMMAND_TYPE:
-        MOTOR_Save_Pid();
+        Flash_Save();
         break;
       case MCU_SET_MOTOR_MAXIMUM_SPEED_COMMAND_TYPE:
         McuSetMotorMaximumSpeedCommand cmd_u = {0};
