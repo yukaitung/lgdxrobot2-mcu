@@ -242,7 +242,6 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim1, TIM_HandleTypeDef *e1_htim, TIM_Ha
 	pid_last_tick = HAL_GetTick();
 	
 	HAL_GPIO_WritePin(RS1_GPIO_Port, RS1_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(DRxSTBY_GPIO_Port, DRxSTBY_Pin, GPIO_PIN_SET);
 }
 
 uint32_t MOTOR_Get_Pid_Elapsed()

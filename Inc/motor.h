@@ -22,7 +22,6 @@ void MOTOR_Set_Temporary_Pid_Speed(float level1, float level2, float level3);
 void MOTOR_Set_Temporary_Pid(int motor, int level, float p, float i, float d);
 void MOTOR_Set_Temporary_Maximum_Speed(float speed1, float speed2, float speed3, float speed4);
 void MOTOR_Save_Pid();
-void MOTOR_Set_Emergency_Stop(int type, bool enable);
 void MOTOR_Reset_Transform();
 void MOTOR_PID();
 

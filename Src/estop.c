@@ -27,6 +27,10 @@ void ESTOP_Init()
 	_reset_led();
 }
 
+/*
+ * Public Functions
+ */
+
 void ESTOP_Enable(int type)
 {
 	if (type < 0 || type > emergency_stops_count)
