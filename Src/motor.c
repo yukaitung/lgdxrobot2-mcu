@@ -420,7 +420,7 @@ void MOTOR_PID()
 		float pid_i = pid.i * pid_accumulate_error[i];
 
 			// Calculate D
-		float pid_d = (error - pid_last_error[i]) / dt;
+		float pid_d = pid.d * ((error - pid_last_error[i]) / dt);
 
 			// Calculate output
 		pid_output[i] = roundf(((pid_p + pid_i + pid_d) / motor_max_speed[i]) * pwm_counter_max);
