@@ -101,12 +101,12 @@ void Handling_Mcu_Data()
     mcu_data.motors_actual_velocity[i] = MOTOR_Get_Actual_Velocity(i);
     mcu_data.motors_desire_velocity[i] = MOTOR_Get_Desired_Velocity(i);
   }
-  mcu_data.motors_ccr[0] = TIM2->CCR1;
+  mcu_data.motors_ccr[0] = TIM2->CCR4;
   mcu_data.motors_ccr[1] = TIM2->CCR2;
-  mcu_data.motors_ccr[2] = TIM2->CCR4;
+  mcu_data.motors_ccr[2] = TIM2->CCR1;
   mcu_data.motors_ccr[3] = TIM2->CCR3;
-  mcu_data.battery1.voltage = Power_Get_Value(logic_battery);
-  mcu_data.battery2.voltage = Power_Get_Value(actuator_battery);
+  mcu_data.battery1.voltage = POWER_Get_Value(logic_battery);
+  mcu_data.battery2.voltage = POWER_Get_Value(actuator_battery);
   mcu_data.software_emergency_stop_enabled = ESTOP_Get_Status(software_emergency_stop);
   mcu_data.hardware_emergency_stop_enabled = ESTOP_Get_Status(hardware_emergency_stop);
   mcu_data.bettery_low_emergency_stop_enabled = ESTOP_Get_Status(bettery_low_emergency_stop);
@@ -119,7 +119,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	{
 		MOTOR_PID();
     Handling_Mcu_Data();
-    Power_Read_Start();
+    POWER_Read_Start();
 	}
 }
 

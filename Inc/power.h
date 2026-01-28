@@ -2,8 +2,8 @@
 #define POWER_H
 
 // Maximum voltage of voltage divider / 4095 (12 bit)
-#define VOLTAGE_PER_VALUE 0.00628571428
-#define ESTOP_VOLTAGE_THRESHOLD 2.8
+#define VOLTAGE_PER_VALUE 0.00628571428f
+#define ESTOP_VOLTAGE_THRESHOLD 2.8f
 
 enum __batteries {
   logic_battery = 0,

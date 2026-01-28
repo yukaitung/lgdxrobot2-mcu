@@ -33,7 +33,7 @@ void ESTOP_Init()
 
 void ESTOP_Enable(int type)
 {
-	if (type < 0 || type > emergency_stops_count)
+	if (type < 0 || type > emergency_stops_count || emergency_stops_enabled[type] == true)
 		return;
 	
 	HAL_GPIO_WritePin(DRxSTBY_GPIO_Port, DRxSTBY_Pin, GPIO_PIN_RESET);
@@ -43,7 +43,7 @@ void ESTOP_Enable(int type)
 
 void ESTOP_Disable(int type)
 {
-	if (type < 0 || type > emergency_stops_count)
+	if (type < 0 || type > emergency_stops_count || emergency_stops_enabled[type] == false)
 		return;
 	
 	emergency_stops_enabled[type] = false;
