@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "configuation.h"
 #include "motor.h"
+#include "estop.h"
 #include "usbd_cdc_if.h"
 
 /* USER CODE END Includes */
@@ -120,9 +121,9 @@ void Handling_Mcu_Data()
   mcu_data.motors_ccr[3] = TIM2->CCR3;
   mcu_data.battery1 = power_monitoring_values[logic_battery];
   mcu_data.battery2 = power_monitoring_values[actuator_battery];
-  mcu_data.software_emergency_stop_enabled = MOTOR_Get_Emergency_Stop_Status(software_emergency_stop);
-  mcu_data.hardware_emergency_stop_enabled = MOTOR_Get_Emergency_Stop_Status(hardware_emergency_stop);
-  mcu_data.bettery_low_emergency_stop_enabled = MOTOR_Get_Emergency_Stop_Status(bettery_low_emergency_stop);
+  mcu_data.software_emergency_stop_enabled = ESTOP_Get_Status(software_emergency_stop);
+  mcu_data.hardware_emergency_stop_enabled = ESTOP_Get_Status(hardware_emergency_stop);
+  mcu_data.bettery_low_emergency_stop_enabled = ESTOP_Get_Status(bettery_low_emergency_stop);
   CDC_Transmit_FS((uint8_t*) &mcu_data, sizeof(McuData));
 }
 
@@ -177,6 +178,7 @@ int main(void)
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
   // Setup Motors
+  ESTOP_Init();
   MOTOR_Init(&htim2, &htim3, &htim4, &htim5, &htim1);
 	HAL_TIM_Base_Start_IT(&htim9);
   MOTOR_Reset_Transform();

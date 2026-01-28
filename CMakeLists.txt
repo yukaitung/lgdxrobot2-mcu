@@ -46,6 +46,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Src/main.c
     Src/motor.c
+    Src/estop.c
 )
 
 # Add include paths

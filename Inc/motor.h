@@ -5,13 +5,6 @@
 #include "stm32f4xx_hal.h"
 #include <stdbool.h>
 
-enum __emergency_stops {
-	software_emergency_stop = 0,
-	hardware_emergency_stop = 1,
-	bettery_low_emergency_stop = 2,
-	emergency_stops_count = 3
-};
-
 void MOTOR_Init(TIM_HandleTypeDef *pwm_htim1, TIM_HandleTypeDef *e1_htim, TIM_HandleTypeDef *e2_htim, TIM_HandleTypeDef *e3_htim, TIM_HandleTypeDef *e4_htim);
 uint32_t MOTOR_Get_Pid_Elapsed();
 float MOTOR_Get_Transform(int axis);

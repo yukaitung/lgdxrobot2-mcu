@@ -24,6 +24,7 @@
 /* USER CODE BEGIN INCLUDE */
 #include "lgdxrobot2.h"
 #include "motor.h"
+#include "estop.h"
 #include "stm32f4xx_hal.h"
 #include "usbd_desc.h"
 
@@ -272,7 +273,14 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
       case MCU_SOFTWARE_EMERGENCY_STOP_COMMAND_TYPE:
         McuSoftwareEmergencyStopCommand cmd_e = {0};
         memcpy(&cmd_e, Buf, sizeof(McuSoftwareEmergencyStopCommand));
-        MOTOR_Set_Emergency_Stop(software_emergency_stop, cmd_e.enable);
+        if (cmd_e.enable)
+        {
+          ESTOP_Enable(software_emergency_stop);
+        }
+        else
+        {
+          ESTOP_Disable(software_emergency_stop);
+        }
         break;
       case MCU_INVERSE_KINEMATICS_COMMAND_TYPE:
         McuInverseKinematicsCommand cmd_i = {0};

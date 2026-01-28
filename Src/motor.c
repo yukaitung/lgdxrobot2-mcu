@@ -36,8 +36,6 @@ float motors_desire_velocity[API_MOTOR_COUNT] = {0, 0, 0, 0}; // For slow down g
 uint16_t encoder_value[API_MOTOR_COUNT] = {0, 0, 0, 0};
 uint16_t encoder_last_value[API_MOTOR_COUNT] = {0, 0, 0, 0};
 
-bool emergency_stops_enabled[emergency_stops_count] = {false, false, false};
-
 TIM_HandleTypeDef *pwm_htim;
 TIM_HandleTypeDef *encoders_htim[API_MOTOR_COUNT];
 
@@ -75,28 +73,7 @@ int _safe_unsigned_subtract(int a, int b, int limit)
 	return a - b;
 }
 
-void _set_led(bool green)
-{
-	if (green)
-	{
-		HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_RESET);
-	}
-	else
-	{
-		HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_SET);
-	}
-}
 
-void _reset_led()
-{
-	for(int i = 0; i < emergency_stops_count; i++)
-	{
-		if(emergency_stops_enabled[i])
-			return;
-	}
-	HAL_GPIO_WritePin(DRxSTBY_GPIO_Port, DRxSTBY_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_RESET);
-}
 
 void _set_ccr(int motor, int ccr)
 {
@@ -266,7 +243,6 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim1, TIM_HandleTypeDef *e1_htim, TIM_Ha
 	
 	HAL_GPIO_WritePin(RS1_GPIO_Port, RS1_Pin, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(DRxSTBY_GPIO_Port, DRxSTBY_Pin, GPIO_PIN_SET);
-	_set_led(true);
 }
 
 uint32_t MOTOR_Get_Pid_Elapsed()
@@ -340,14 +316,6 @@ float MOTOR_Get_Pid(int motor, int level, int k)
 			return motors_Kd[level][motor];
 	}
 	return 0;
-}
-
-bool MOTOR_Get_Emergency_Stop_Status(int type)
-{
-	if (type < 0 || type > emergency_stops_count)
-		return false;
-
-	return emergency_stops_enabled[type];
 }
 
 void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w)
@@ -424,24 +392,6 @@ void MOTOR_Save_Pid()
 		HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, flash_start_address + i, data[i]);
 	}
 	HAL_FLASH_Lock();
-}
-
-void MOTOR_Set_Emergency_Stop(int type, bool enable)
-{
-	if (type < 0 || type > emergency_stops_count)
-		return;
-	
-	if (enable)
-	{
-		HAL_GPIO_WritePin(DRxSTBY_GPIO_Port, DRxSTBY_Pin, GPIO_PIN_RESET);
-		_set_led(false);
-		emergency_stops_enabled[type] = true;
-	}
-	else
-	{
-		emergency_stops_enabled[type] = false;
-		_reset_led();
-	}
 }
 
 void MOTOR_Reset_Transform()
