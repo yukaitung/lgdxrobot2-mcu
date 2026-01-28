@@ -1,6 +1,8 @@
 #ifndef __ESTOP_H
 #define __ESTOP_H
 
+#include <stdbool.h>
+
 enum __emergency_stops {
 	software_emergency_stop = 0,
 	hardware_emergency_stop = 1,

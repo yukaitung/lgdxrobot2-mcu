@@ -9,6 +9,10 @@
 bool _data_empty = true;
 flash_data _data = {0};
 
+/*
+ * Private Functions
+ */
+
 void _read_from_flash()
 {
   if (_data_empty)
