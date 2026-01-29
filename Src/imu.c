@@ -135,11 +135,12 @@ void _cablicate()
 void _imu_step_process()
 {
   uint8_t value = 0;
-  _select();
+  
   switch (_current_step) 
   {
     case select_bank_0_addr:
       value = REG_BANK_SEL;
+      _select();
       HAL_SPI_Transmit_IT(_hspi, &value, 1);
       break;
     case select_bank_0_value:
@@ -148,6 +149,7 @@ void _imu_step_process()
       break;
     case get_accel_gyro_addr:
       value = ACCEL_XOUT_H | 0x80;
+      _select();
       HAL_SPI_Transmit_IT(_hspi, &value, 1);
       break;
     case get_accel_gyro_read:
@@ -162,7 +164,10 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef * hspi)
 {
   if (hspi->Instance == _hspi->Instance)
   {
-    _unselect();
+    if (_current_step == select_bank_0_value)
+    {
+      _unselect();
+    }
     _current_step++;
     _imu_step_process();
   }
@@ -173,15 +178,6 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef * hspi)
   if (hspi->Instance == _hspi->Instance)
   {
     _unselect();
-    if (_current_step == get_accel_gyro_read)
-    {
-      _imu_data.accelerometer.x = _get_accel(_buffer[0], _buffer[1]) * G_TO_M_S2;
-      _imu_data.accelerometer.y = _get_accel(_buffer[2], _buffer[3]) * G_TO_M_S2;
-      _imu_data.accelerometer.z = _get_accel(_buffer[4], _buffer[5]) * G_TO_M_S2;
-      _imu_data.gyroscope.x = (_get_gyro(_buffer[6], _buffer[7]) - gyro_offset[0]) * DEG_TO_RAD;
-      _imu_data.gyroscope.y = (_get_gyro(_buffer[8], _buffer[9]) - gyro_offset[1]) * DEG_TO_RAD;
-      _imu_data.gyroscope.z = (_get_gyro(_buffer[10], _buffer[11]) - gyro_offset[2]) * DEG_TO_RAD;
-    }
     _current_step++;
     _imu_step_process();
   }
@@ -209,7 +205,6 @@ void IMU_Init(SPI_HandleTypeDef *hspi)
   //_write(GYRO_SMPLRT_DIV, 0x01);
   _write(GYRO_CONFIG_1, (6 << 3) | (_gyro_precision << 1) | 0x01);
 
-
   _write(ACCEL_SMPLRT_DIV_1, 0x0A);
   _write(ACCEL_SMPLRT_DIV_2, 0x00);
   _write(ACCEL_CONFIG, (6 << 3) | (_accel_precision << 1) | 0x01);
@@ -228,27 +223,20 @@ void IMU_Init(SPI_HandleTypeDef *hspi)
 
 void IMU_Read_Start()
 {
-  _select_bank(0);
-  uint8_t addr = ACCEL_XOUT_H | 0x80;
-  _select();
-  HAL_SPI_Transmit(_hspi, &addr, 1, TIMEOUT_MS);
-  HAL_SPI_Receive(_hspi, _buffer, 12, TIMEOUT_MS);
-  _unselect();
+ if (_current_step == done)
+ {
+    _current_step = select_bank_0_addr;
+    _imu_step_process();
+ }
+}
+
+McuImuDof IMU_Get_Data()
+{
   _imu_data.accelerometer.x = (_get_accel(_buffer[0], _buffer[1]) - accel_offset[0]) * G_TO_M_S2;
   _imu_data.accelerometer.y = (_get_accel(_buffer[2], _buffer[3]) - accel_offset[1]) * G_TO_M_S2;
   _imu_data.accelerometer.z = (_get_accel(_buffer[4], _buffer[5]) - accel_offset[2]) * G_TO_M_S2;
   _imu_data.gyroscope.x = (_get_gyro(_buffer[6], _buffer[7]) - gyro_offset[0]) * DEG_TO_RAD;
   _imu_data.gyroscope.y = (_get_gyro(_buffer[8], _buffer[9]) - gyro_offset[1]) * DEG_TO_RAD;
   _imu_data.gyroscope.z = (_get_gyro(_buffer[10], _buffer[11]) - gyro_offset[2]) * DEG_TO_RAD;
-/*
- if (_current_step == done)
- {
-    _current_step = select_bank_0_addr;
-    _imu_step_process();
- }*/
-}
-
-McuImuDof IMU_Get_Data()
-{
   return _imu_data;
 }
