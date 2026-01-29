@@ -49,6 +49,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Src/estop.c
     Src/flash.c
     Src/power.c
+    Src/imu.c
 )
 
 # Add include paths

@@ -26,6 +26,7 @@
 #include "motor.h"
 #include "estop.h"
 #include "power.h"
+#include "imu.h"
 #include "usbd_cdc_if.h"
 
 /* USER CODE END Includes */
@@ -110,6 +111,7 @@ void Handling_Mcu_Data()
   mcu_data.software_emergency_stop_enabled = ESTOP_Get_Status(software_emergency_stop);
   mcu_data.hardware_emergency_stop_enabled = ESTOP_Get_Status(hardware_emergency_stop);
   mcu_data.bettery_low_emergency_stop_enabled = ESTOP_Get_Status(bettery_low_emergency_stop);
+  mcu_data.imu = IMU_Get_Data();
   CDC_Transmit_FS((uint8_t*) &mcu_data, sizeof(McuData));
 }
 
@@ -119,7 +121,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	{
 		MOTOR_PID();
     Handling_Mcu_Data();
-    POWER_Read_Start();
+    IMU_Read_Start();
+    //POWER_Read_Start();
 	}
 }
 
@@ -165,9 +168,11 @@ int main(void)
   MX_ADC1_Init();
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
-  ESTOP_Init();
-  POWER_Init(&hadc1);
+  HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_SET);
+  IMU_Init(&hspi2);
+  //POWER_Init(&hadc1);
   MOTOR_Init(&htim2, &htim3, &htim4, &htim5, &htim1);
+  ESTOP_Init();
 
 	HAL_TIM_Base_Start_IT(&htim9);
 
@@ -322,10 +327,10 @@ static void MX_SPI2_Init(void)
   hspi2.Init.Mode = SPI_MODE_MASTER;
   hspi2.Init.Direction = SPI_DIRECTION_2LINES;
   hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi2.Init.CLKPolarity = SPI_POLARITY_HIGH;
+  hspi2.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi2.Init.NSS = SPI_NSS_SOFT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
