@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #define CABLICATE_COUNT 1000
+#define IMU_READ_SIZE 23
 
 const uint8_t _gyro_precision = GYRO_500_DPS;
 const uint8_t _accel_precision = ACCEL_2G;
@@ -20,7 +21,7 @@ int _current_step = done;
 
 SPI_HandleTypeDef *_hspi;
 McuImuDof _imu_data = {0};
-uint8_t _buffer[22] = {0};
+uint8_t _buffer[IMU_READ_SIZE] = {0};
 
 float accel_offset[3] = {0};
 float gyro_offset[3] = {0};
@@ -75,8 +76,7 @@ void _mag_write(uint8_t addr, uint8_t value)
   _write(3, I2C_SLV0_ADDR, MAG_ADDRESS);
   _write(3, I2C_SLV0_REG, addr);
   _write(3, I2C_SLV0_DO, value);
-  _write(3, I2C_SLV0_CTRL, 0x80);
-  HAL_Delay(50);
+  _write(3, I2C_SLV0_CTRL, 0x80 | 0x01);
 }
 
 void _mag_read(uint8_t addr, uint8_t len)
@@ -84,7 +84,6 @@ void _mag_read(uint8_t addr, uint8_t len)
   _write(3, I2C_SLV0_ADDR, 0x80 | MAG_ADDRESS);
   _write(3, I2C_SLV0_REG, addr);
   _write(3, I2C_SLV0_CTRL, 0x80 | len);
-  HAL_Delay(50);
 }
 
 void _init_mag()
@@ -103,8 +102,14 @@ void _init_mag()
   _write(0, USER_CTRL, buf);
   HAL_Delay(10);
 
-  // Set I2C Clock to 345.60 kHz
+  // Set I2C Clock
   _write(3, I2C_MST_CTRL, 0x07);
+  HAL_Delay(10);
+
+  _write(0, LP_CONFIG, 0x40);
+  HAL_Delay(10);
+
+  _write(3, I2C_MST_ODR_CONFIG, 0x03);
   HAL_Delay(10);
 
   // Reset Mag
@@ -113,7 +118,11 @@ void _init_mag()
 
   // Set Mag Mode
   _mag_write(MAG_CNTL2, 0x08);
-  HAL_Delay(10);
+  HAL_Delay(50);
+
+  // Start Read
+  _mag_read(MAG_ST1, 9);
+  HAL_Delay(100);
 }
 
 float _get_accel(uint8_t high, uint8_t low)
@@ -150,6 +159,12 @@ float _get_gyro(uint8_t high, uint8_t low)
   }
 }
 
+float _get_mag(uint8_t high, uint8_t low)
+{
+  int16_t value = (high << 8) | low;
+  return (float)value * MAG_STEP;
+}
+
 void _cablicate()
 {
   uint8_t addr = ACCEL_XOUT_H | 0x80;
@@ -161,7 +176,7 @@ void _cablicate()
   {
     _select();
     HAL_SPI_Transmit(_hspi, &addr, 1, TIMEOUT_MS);
-    HAL_SPI_Receive(_hspi, _buffer, 20, TIMEOUT_MS);
+    HAL_SPI_Receive(_hspi, _buffer, IMU_READ_SIZE, TIMEOUT_MS);
     _unselect();
     acc_accel[0] += _get_accel(_buffer[0], _buffer[1]);
     acc_accel[1] += _get_accel(_buffer[2], _buffer[3]);
@@ -201,7 +216,7 @@ void _imu_step_process()
       HAL_SPI_Transmit_IT(_hspi, &value, 1);
       break;
     case get_accel_gyro_read:
-      HAL_SPI_Receive_IT(_hspi, _buffer, 20);
+      HAL_SPI_Receive_IT(_hspi, _buffer, IMU_READ_SIZE);
       break;
     case done:
       break;
@@ -244,25 +259,21 @@ void IMU_Init(SPI_HandleTypeDef *hspi)
   HAL_Delay(100);
   _write(0, PWR_MGMT_1, 0x01);
 
-  // Start sensors
+  // Set SPI Only
+  _write(0, USER_CTRL, 0x10);
+  HAL_Delay(10);
+
+  // Start Sensors
   _write(2, ODR_ALIGN_EN, 0x01);
 
-  //_write(GYRO_SMPLRT_DIV, 0x01);
+  _write(2, GYRO_SMPLRT_DIV, 0x0A); // ~100Hz
   _write(2, GYRO_CONFIG_1, (6 << 3) | (_gyro_precision << 1) | 0x01);
 
-  _write(2, ACCEL_SMPLRT_DIV_1, 0x0A);
-  _write(2, ACCEL_SMPLRT_DIV_2, 0x00);
+  _write(2, ACCEL_SMPLRT_DIV_1, 0x00);
+  _write(2, ACCEL_SMPLRT_DIV_2, 0x0A); // ~100Hz
   _write(2, ACCEL_CONFIG, (6 << 3) | (_accel_precision << 1) | 0x01);
 
-  // Enable SPI
-  uint8_t config = _read(0, USER_CTRL);
-  config |= 0x10; 
-  _write(0, USER_CTRL, config);
-  HAL_Delay(100);
-
   _init_mag();
-  _mag_read(MAG_HXL, 0x08);
-
   _cablicate();
 
   IMU_Read_Start();
@@ -285,8 +296,8 @@ McuImuDof IMU_Get_Data()
   _imu_data.gyroscope.x = (_get_gyro(_buffer[6], _buffer[7]) - gyro_offset[0]) * DEG_TO_RAD;
   _imu_data.gyroscope.y = (_get_gyro(_buffer[8], _buffer[9]) - gyro_offset[1]) * DEG_TO_RAD;
   _imu_data.gyroscope.z = (_get_gyro(_buffer[10], _buffer[11]) - gyro_offset[2]) * DEG_TO_RAD;
-  _imu_data.magnetometer.x = (float)(_buffer[15] << 8 | _buffer[14]);
-  _imu_data.magnetometer.y = (float)(_buffer[17] << 8 | _buffer[16]);
-  _imu_data.magnetometer.z = (float)(_buffer[19] << 8 | _buffer[18]);
+  _imu_data.magnetometer.x = _get_mag(_buffer[16], _buffer[15]);
+  _imu_data.magnetometer.y = _get_mag(_buffer[18], _buffer[17]);
+  _imu_data.magnetometer.z = _get_mag(_buffer[20], _buffer[19]);
   return _imu_data;
 }

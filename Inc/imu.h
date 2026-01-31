@@ -9,9 +9,9 @@
 
 // Bank 0
 #define USER_CTRL 0x03
+#define LP_CONFIG 0x05
 #define PWR_MGMT_1 0x06
 #define ACCEL_XOUT_H 0x2D
-#define LP_CONFIG 0x40
 
 // Bank 1
 #define XA_OFFS_H 0x14
@@ -56,8 +56,9 @@
 #define ACCEL_16G 0x03
 
 // Magentometer
+#define MAG_STEP 0.15f
 #define MAG_ADDRESS 0x0C
-#define MAG_HXL 0x11
+#define MAG_ST1 0x10
 #define MAG_CNTL2 0x31
 #define MAG_CNTL3 0x32
 
