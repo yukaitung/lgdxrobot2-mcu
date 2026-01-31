@@ -43,28 +43,12 @@
 #define I2C_SLV0_CTRL 0x05
 #define I2C_SLV0_DO 0x06
 
-// Gyro Precision
-#define GYRO_250_DPS 0x00
-#define GYRO_500_DPS 0x01
-#define GYRO_1000_DPS 0x02
-#define GYRO_2000_DPS 0x03
-
-// Accel Precision
-#define ACCEL_2G 0x00
-#define ACCEL_4G 0x01
-#define ACCEL_8G 0x02
-#define ACCEL_16G 0x03
-
 // Magentometer
 #define MAG_STEP 0.15f
 #define MAG_ADDRESS 0x0C
 #define MAG_ST1 0x10
 #define MAG_CNTL2 0x31
 #define MAG_CNTL3 0x32
-
-// ROS
-#define G_TO_M_S2 9.80665
-#define DEG_TO_RAD 0.01745329252
 
 void IMU_Init(SPI_HandleTypeDef *hspi);
 void IMU_Read_Start();
