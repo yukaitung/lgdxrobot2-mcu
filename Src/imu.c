@@ -11,9 +11,7 @@ const uint8_t _gyro_precision = MCU_IMU_GYRO_500_DPS;
 const uint8_t _accel_precision = MCU_IMU_ACCEL_2G;
 
 enum __imu_steps {
-  select_bank_0_addr = 0,
-  select_bank_0_value,
-  get_accel_gyro_addr,
+  get_accel_gyro_addr = 0,
   get_accel_gyro_read,
   done
 };
@@ -131,15 +129,6 @@ void _imu_step_process()
   
   switch (_current_step) 
   {
-    case select_bank_0_addr:
-      value = REG_BANK_SEL;
-      _select();
-      HAL_SPI_Transmit_IT(_hspi, &value, 1);
-      break;
-    case select_bank_0_value:
-      value = 0 << 4;
-      HAL_SPI_Transmit_IT(_hspi, &value, 1);
-      break;
     case get_accel_gyro_addr:
       value = ACCEL_XOUT_H | 0x80;
       _select();
@@ -157,10 +146,6 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef * hspi)
 {
   if (hspi->Instance == _hspi->Instance)
   {
-    if (_current_step == select_bank_0_value)
-    {
-      _unselect();
-    }
     _current_step++;
     _imu_step_process();
   }
@@ -205,6 +190,8 @@ void IMU_Init(SPI_HandleTypeDef *hspi)
 
   _init_mag();
 
+  _select_bank(0);
+
   IMU_Read_Start();
 }
 
@@ -212,7 +199,7 @@ void IMU_Read_Start()
 {
  if (_current_step == done)
  {
-    _current_step = select_bank_0_addr;
+    _current_step = get_accel_gyro_addr;
     _imu_step_process();
  }
 }
