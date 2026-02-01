@@ -179,7 +179,6 @@ typedef struct {
 } McuSetMotorMaximumSpeedCommand;
 
 // Mag
-
 typedef struct {
   uint8_t header1;
   uint8_t header2;
