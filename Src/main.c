@@ -170,7 +170,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_SET);
   IMU_Init(&hspi2);
-  //POWER_Init(&hadc1);
+  POWER_Init(&hadc1);
   MOTOR_Init(&htim2, &htim3, &htim4, &htim5, &htim1);
   ESTOP_Init();
 
