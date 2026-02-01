@@ -42,6 +42,10 @@
 #define I2C_SLV0_REG 0x04
 #define I2C_SLV0_CTRL 0x05
 #define I2C_SLV0_DO 0x06
+#define I2C_SLV4_ADDR 0x13
+#define I2C_SLV4_REG 0x14
+#define I2C_SLV4_CTRL 0x15
+#define I2C_SLV4_DO 0x16
 
 // Magentometer
 #define MAG_STEP 0.15f

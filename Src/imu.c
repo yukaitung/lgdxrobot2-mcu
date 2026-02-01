@@ -77,6 +77,15 @@ void _mag_write(uint8_t addr, uint8_t value)
   _write(3, I2C_SLV0_CTRL, 0x80 | 0x01);
 }
 
+void _mag_write_slv4(uint8_t addr, uint8_t value)
+{
+  _write(3, I2C_SLV0_ADDR, MAG_ADDRESS);
+  _write(3, I2C_SLV0_REG, addr);
+  _write(3, I2C_SLV0_DO, value);
+  _write(3, I2C_SLV0_CTRL, 0x80 | 0x01);
+}
+
+
 void _mag_read(uint8_t addr, uint8_t len)
 {
   _write(3, I2C_SLV0_ADDR, 0x80 | MAG_ADDRESS);
@@ -111,11 +120,11 @@ void _init_mag()
   HAL_Delay(10);
 
   // Reset Mag
-  _mag_write(MAG_CNTL3, 0x01);
+  _mag_write_slv4(MAG_CNTL3, 0x01);
   HAL_Delay(100);
 
   // Set Mag Mode
-  _mag_write(MAG_CNTL2, 0x08);
+  _mag_write_slv4(MAG_CNTL2, 0x08);
   HAL_Delay(50);
 
   // Start Read
