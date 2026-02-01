@@ -5,6 +5,7 @@
 #include "stm32f4xx_hal_flash_ex.h"
 #include "flash.h"
 #include "motor.h"
+#include "imu.h"
 
 bool _data_empty = true;
 flash_data _data = {0};
@@ -41,6 +42,7 @@ flash_data Flash_Get()
 void Flash_Save()
 {
 	_data.modified = FLASH_DATA_MODIFIED;
+	// PID
   for(int level = 0; level < PID_LEVEL; level++)
 	{
 		for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
@@ -54,6 +56,16 @@ void Flash_Save()
 	for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
 	{
 		_data.motors_maximum_speed[motor] = MOTOR_Get_Maximum_Speed(motor);
+	}
+	// Mag
+	for (int i = 0; i < 3; i++)
+	{
+		_data.mag_hard_iron_max[i] = IMU_Get_Hard_Iron_Max(i);
+		_data.mag_hard_iron_min[i] = IMU_Get_Hard_Iron_Min(i);
+	}
+	for (int i = 0; i < 9; i++)
+	{
+		_data.mag_soft_iron_matrix[i] = IMU_Get_Soft_Iron_Matrix(i);
 	}
 	uint8_t* data = (uint8_t*) &_data;
 	HAL_FLASH_Unlock();

@@ -56,6 +56,10 @@
 
 void IMU_Init(SPI_HandleTypeDef *hspi);
 void IMU_Read_Start();
-McuImuDof IMU_Get_Data();
+void IMU_Set_Mag_Calibration_Data(const McuSetMagCalibrationDataCommand *cmd);
+McuImuData IMU_Get_Data();
+float IMU_Get_Hard_Iron_Max(int axis);
+float IMU_Get_Hard_Iron_Min(int axis);
+float IMU_Get_Soft_Iron_Matrix(int index);
 
 #endif

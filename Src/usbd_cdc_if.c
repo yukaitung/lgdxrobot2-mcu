@@ -26,6 +26,7 @@
 #include "motor.h"
 #include "estop.h"
 #include "flash.h"
+#include "imu.h"
 #include "stm32f4xx_hal.h"
 #include "usbd_desc.h"
 
@@ -326,7 +327,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
         memcpy(&cmd_q, Buf, sizeof(McuSetPidCommand));
         MOTOR_Set_Temporary_Pid(cmd_q.motor, cmd_q.level, cmd_q.p, cmd_q.i, cmd_q.d);
         break;
-      case MCU_SAVE_PID_COMMAND_TYPE:
+      case MCU_SAVE_SETTINGS_COMMAND_TYPE:
         Flash_Save();
         break;
       case MCU_SET_MOTOR_MAXIMUM_SPEED_COMMAND_TYPE:
@@ -346,6 +347,11 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
         serial_number.serial_number2 = HAL_GetUIDw1();
         serial_number.serial_number3 = HAL_GetUIDw2();
         CDC_Transmit_FS((uint8_t*) &serial_number, sizeof(McuSerialNumber));
+        break;
+      case MCU_SET_MAG_CALIBRATION_DATA_COMMAND_TYPE:
+        McuSetMagCalibrationDataCommand cmd_w = {0};
+        memcpy(&cmd_w, Buf, sizeof(McuSetMagCalibrationDataCommand));
+        IMU_Set_Mag_Calibration_Data(&cmd_w);
         break;
       case MCU_RESET_TRANSFORM_COMMAND_TYPE:
         MOTOR_Reset_Transform();

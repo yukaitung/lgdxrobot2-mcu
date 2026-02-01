@@ -3,6 +3,7 @@
 #include "stm32f4xx_hal_conf.h"
 
 #include "imu.h"
+#include "flash.h"
 
 #define CABLICATE_COUNT 1000
 #define IMU_READ_SIZE 23
@@ -18,11 +19,11 @@ enum __imu_steps {
 int _current_step = done;
 
 SPI_HandleTypeDef *_hspi;
-McuImuDof _imu_data = {0};
+McuImuData _imu_data = {0};
 uint8_t _buffer[IMU_READ_SIZE] = {0};
-
-int16_t accel_offset[3] = {0};
-int16_t gyro_offset[3] = {0};
+float _mag_hard_iron_max[3] = {0};
+float _mag_hard_iron_min[3] = {0};
+float _mag_soft_iron_matrix[9] = {0};
 
 /*
  * Private Functions
@@ -178,6 +179,20 @@ void IMU_Init(SPI_HandleTypeDef *hspi)
 {
   _hspi = hspi;
 
+  flash_data data = Flash_Get();
+	if (data.modified == FLASH_DATA_MODIFIED) // If the data is not modified, use the default value
+	{
+    for(int i = 0; i < 3; i++)
+    {
+      _mag_hard_iron_max[i] = data.mag_hard_iron_max[i];
+      _mag_hard_iron_min[i] = data.mag_hard_iron_min[i];
+    }
+    for(int i = 0; i < 9; i++)
+    {
+      _mag_soft_iron_matrix[i] = data.mag_soft_iron_matrix[i];
+    }
+  }
+
   // Reset
   _write(0, PWR_MGMT_1, 0x80);
   HAL_Delay(100);
@@ -213,7 +228,20 @@ void IMU_Read_Start()
  }
 }
 
-McuImuDof IMU_Get_Data()
+void IMU_Set_Mag_Calibration_Data(const McuSetMagCalibrationDataCommand *cmd)
+{
+  for(int i = 0; i < 3; i++)
+  {
+    _mag_hard_iron_max[i] = cmd->hard_iron_max[i];
+    _mag_hard_iron_min[i] = cmd->hard_iron_min[i];
+  }
+  for(int i = 0; i < 9; i++)
+  {
+    _mag_soft_iron_matrix[i] = cmd->soft_iron_matrix[i];
+  }
+}
+
+McuImuData IMU_Get_Data()
 {
   _imu_data.accelerometer.x = (int16_t)(_buffer[0] << 8 | _buffer[1]);
   _imu_data.accelerometer.y = (int16_t)(_buffer[2] << 8 | _buffer[3]);
@@ -226,5 +254,37 @@ McuImuDof IMU_Get_Data()
   _imu_data.magnetometer.z = (int16_t)(_buffer[20] << 8 | _buffer[19]);
   _imu_data.accelerometer_precision = _accel_precision;
   _imu_data.gyroscope_precision = _gyro_precision;
+  for (int i = 0; i < 3; i++)
+  {
+    _imu_data.magnetometer_hard_iron_max[i] = _mag_hard_iron_max[i];
+    _imu_data.magnetometer_hard_iron_min[i] = _mag_hard_iron_min[i];
+  }
+  for (int i = 0; i < 9; i++)
+  {
+    _imu_data.magnetometer_soft_iron_matrix[i] = _mag_soft_iron_matrix[i];
+  }
   return _imu_data;
+}
+
+float IMU_Get_Hard_Iron_Max(int axis)
+{
+  if (axis < 0 || axis > 2)
+    return 0;
+
+  return _mag_hard_iron_max[axis];
+}
+
+float IMU_Get_Hard_Iron_Min(int axis)
+{
+  if (axis < 0 || axis > 2)
+    return 0;
+
+  return _mag_hard_iron_min[axis];
+}
+float IMU_Get_Soft_Iron_Matrix(int index)
+{
+  if (index < 0 || index > 8)
+    return 0;
+
+  return _mag_soft_iron_matrix[index];
 }

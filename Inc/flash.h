@@ -19,6 +19,10 @@ typedef struct {
 	_pid pid[PID_LEVEL][API_MOTOR_COUNT];
 	float pid_speed[PID_LEVEL];
 	float motors_maximum_speed[API_MOTOR_COUNT];
+	// Mag
+	float mag_hard_iron_max[3];
+	float mag_hard_iron_min[3];
+	float mag_soft_iron_matrix[9];
 } flash_data;
 #pragma pack(pop)
 
