@@ -54,6 +54,20 @@
 #define MAG_CNTL2 0x31
 #define MAG_CNTL3 0x32
 
+#define GYRO_250_DPS 0x00
+#define GYRO_500_DPS 0x01
+#define GYRO_1000_DPS 0x02
+#define GYRO_2000_DPS 0x03
+
+#define ACCEL_2G 0x00
+#define ACCEL_4G 0x01
+#define ACCEL_8G 0x02
+#define ACCEL_16G 0x03
+
+#define G_TO_MS2 9.80665
+#define DEG_TO_RAD 0.017453292519943295
+#define TO_M_TESLA 0.15
+
 void IMU_Init(SPI_HandleTypeDef *hspi);
 void IMU_Read_Start();
 void IMU_Set_Mag_Calibration_Data(const McuSetMagCalibrationDataCommand *cmd);
