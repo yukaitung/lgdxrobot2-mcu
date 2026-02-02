@@ -354,7 +354,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
         IMU_Set_Mag_Calibration_Data(&cmd_w);
         break;
       case MCU_GET_MAG_CALIBRATION_DATA_COMMAND_TYPE:
-        McuGetMagCalibrationDataCommand mag_calibration_data = {0};
+        McuMagCalibrationData mag_calibration_data = {0};
         mag_calibration_data.header1 = MCU_HEADER1;
         mag_calibration_data.header2 = MCU_HEADER2;
         mag_calibration_data.header3 = MCU_HEADER3;
@@ -369,7 +369,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
         {
           mag_calibration_data.soft_iron_matrix[i] = IMU_Get_Soft_Iron_Matrix(i);
         }
-        CDC_Transmit_FS((uint8_t*) &mag_calibration_data, sizeof(McuGetMagCalibrationDataCommand));
+        CDC_Transmit_FS((uint8_t*) &mag_calibration_data, sizeof(McuMagCalibrationData));
         break;
       case MCU_RESET_TRANSFORM_COMMAND_TYPE:
         MOTOR_Reset_Transform();
