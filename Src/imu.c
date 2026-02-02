@@ -87,15 +87,6 @@ void _mag_write(uint8_t addr, uint8_t value)
   _write(3, I2C_SLV0_CTRL, 0x80 | 0x01);
 }
 
-void _mag_write_slv4(uint8_t addr, uint8_t value)
-{
-  _write(3, I2C_SLV0_ADDR, MAG_ADDRESS);
-  _write(3, I2C_SLV0_REG, addr);
-  _write(3, I2C_SLV0_DO, value);
-  _write(3, I2C_SLV0_CTRL, 0x80 | 0x01);
-}
-
-
 void _mag_read(uint8_t addr, uint8_t len)
 {
   _write(3, I2C_SLV0_ADDR, 0x80 | MAG_ADDRESS);
@@ -185,18 +176,18 @@ void _covariance_matrix(float accelX, float accelY, float accelZ,
     float mag_mean[3] = {0};
     for (int i = 0; i < CABLICATE_COUNT; i++)
     {
-      for (int j = 0; j < 3; j++)
+      for (int axis = 0; axis < 3; axis++)
       {
-        accel_mean[j] += _accel_history[j][i];
-        gyro_mean[j] += _gyro_history[j][i];
-        mag_mean[j] += _mag_history[j][i];
+        accel_mean[axis] += _accel_history[axis][i];
+        gyro_mean[axis] += _gyro_history[axis][i];
+        mag_mean[axis] += _mag_history[axis][i];
       }
     }
-    for (int j = 0; j < 3; j++)
+    for (int axis = 0; axis < 3; axis++)
     {
-      accel_mean[j] /= CABLICATE_COUNT;
-      gyro_mean[j] /= CABLICATE_COUNT;
-      mag_mean[j] /= CABLICATE_COUNT;
+      accel_mean[axis] /= CABLICATE_COUNT;
+      gyro_mean[axis] /= CABLICATE_COUNT;
+      mag_mean[axis] /= CABLICATE_COUNT;
     }
 
     // Calculate variance
@@ -205,18 +196,18 @@ void _covariance_matrix(float accelX, float accelY, float accelZ,
     float mag_variance[3] = {0};
     for (int i = 0; i < CABLICATE_COUNT; i++)
     {
-      for (int j = 0; j < 3; j++)
+      for (int axis = 0; axis < 3; axis++)
       {
-        accel_variance[j] += (_accel_history[j][i] - accel_mean[j]) * (_accel_history[j][i] - accel_mean[j]);
-        gyro_variance[j] += (_gyro_history[j][i] - gyro_mean[j]) * (_gyro_history[j][i] - gyro_mean[j]);
-        mag_variance[j] += (_mag_history[j][i] - mag_mean[j]) * (_mag_history[j][i] - mag_mean[j]);
+        accel_variance[axis] += powf((_accel_history[axis][i] - accel_mean[axis]), 2);
+        gyro_variance[axis] += powf((_gyro_history[axis][i] - gyro_mean[axis]), 2);
+        mag_variance[axis] += powf((_mag_history[axis][i] - mag_mean[axis]), 2);
       }
     }
-    for (int j = 0; j < 3; j++)
+    for (int axis = 0; axis < 3; axis++)
     {
-      accel_variance[j] = sqrt(accel_variance[0] / CABLICATE_COUNT);
-      gyro_variance[j] = sqrt(gyro_variance[0] / CABLICATE_COUNT);
-      mag_variance[j] = sqrt(mag_variance[0] / CABLICATE_COUNT);
+      accel_variance[axis] = sqrtf((accel_variance[axis] / CABLICATE_COUNT));
+      gyro_variance[axis] = sqrtf((gyro_variance[axis] / CABLICATE_COUNT));
+      mag_variance[axis] = sqrtf((mag_variance[axis] / CABLICATE_COUNT));
     }
     
     _imu_data.accelerometer_covariance.x = accel_variance[0];
@@ -305,11 +296,11 @@ void _init_mag()
   HAL_Delay(10);
 
   // Reset Mag
-  _mag_write_slv4(MAG_CNTL3, 0x01);
+  _mag_write(MAG_CNTL3, 0x01);
   HAL_Delay(100);
 
   // Set Mag Mode
-  _mag_write_slv4(MAG_CNTL2, 0x08);
+  _mag_write(MAG_CNTL2, 0x08);
   HAL_Delay(50);
 
   // Start Read
@@ -423,6 +414,12 @@ void IMU_Read_Start()
  {
     _current_step = get_accel_gyro_addr;
     _imu_step_process();
+ }
+ else if (_current_step == get_accel_gyro_read)
+ {  
+    // SPI read stuck, retry
+    _unselect();
+    _current_step = done;
  }
 }
 
