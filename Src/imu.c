@@ -4,8 +4,8 @@
 
 #include "imu.h"
 #include "flash.h"
+#include <math.h>
 #include <stdint.h>
-#include <sys/_intsup.h>
 
 #define CABLICATE_COUNT 100
 #define IMU_READ_SIZE 23
@@ -28,6 +28,11 @@ float _mag_hard_iron_min[3] = {0};
 float _mag_soft_iron_matrix[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
 float _accel_offset[3] = {0};
 float _gyro_offset[3] = {0};
+
+float _accel_history[3][CABLICATE_COUNT] = {0};
+float _gyro_history[3][CABLICATE_COUNT] = {0};
+float _mag_history[3][CABLICATE_COUNT] = {0};
+int _history_index = 0;
 
 /*
  * Private Functions
@@ -156,6 +161,77 @@ float _get_mag(uint8_t high, uint8_t low, int axis)
 	return 0.0;
 }
 
+void _covariance_matrix(float accelX, float accelY, float accelZ, 
+  float gyroX, float gyroY, float gyroZ, 
+  float magX, float magY, float magZ)
+{
+  _accel_history[0][_history_index] = accelX;
+  _accel_history[1][_history_index] = accelY;
+  _accel_history[2][_history_index] = accelZ;
+  _gyro_history[0][_history_index] = gyroX;
+  _gyro_history[1][_history_index] = gyroY;
+  _gyro_history[2][_history_index] = gyroZ;
+  _mag_history[0][_history_index] = magX;
+  _mag_history[1][_history_index] = magY;
+  _mag_history[2][_history_index] = magZ;
+
+  _history_index++;
+  // Calculate covariance matrix
+  if (_history_index >= CABLICATE_COUNT)
+  {
+    // Calculate mean
+    float accel_mean[3] = {0};
+    float gyro_mean[3] = {0};
+    float mag_mean[3] = {0};
+    for (int i = 0; i < CABLICATE_COUNT; i++)
+    {
+      for (int j = 0; j < 3; j++)
+      {
+        accel_mean[j] += _accel_history[j][i];
+        gyro_mean[j] += _gyro_history[j][i];
+        mag_mean[j] += _mag_history[j][i];
+      }
+    }
+    for (int j = 0; j < 3; j++)
+    {
+      accel_mean[j] /= CABLICATE_COUNT;
+      gyro_mean[j] /= CABLICATE_COUNT;
+      mag_mean[j] /= CABLICATE_COUNT;
+    }
+
+    // Calculate variance
+    float accel_variance[3] = {0};
+    float gyro_variance[3] = {0};
+    float mag_variance[3] = {0};
+    for (int i = 0; i < CABLICATE_COUNT; i++)
+    {
+      for (int j = 0; j < 3; j++)
+      {
+        accel_variance[j] += (_accel_history[j][i] - accel_mean[j]) * (_accel_history[j][i] - accel_mean[j]);
+        gyro_variance[j] += (_gyro_history[j][i] - gyro_mean[j]) * (_gyro_history[j][i] - gyro_mean[j]);
+        mag_variance[j] += (_mag_history[j][i] - mag_mean[j]) * (_mag_history[j][i] - mag_mean[j]);
+      }
+    }
+    for (int j = 0; j < 3; j++)
+    {
+      accel_variance[j] = sqrt(accel_variance[0] / CABLICATE_COUNT);
+      gyro_variance[j] = sqrt(gyro_variance[0] / CABLICATE_COUNT);
+      mag_variance[j] = sqrt(mag_variance[0] / CABLICATE_COUNT);
+    }
+    
+    _imu_data.accelerometer_covariance.x = accel_variance[0];
+    _imu_data.accelerometer_covariance.y = accel_variance[1];
+    _imu_data.accelerometer_covariance.z = accel_variance[2];
+    _imu_data.gyroscope_covariance.x = gyro_variance[0];
+    _imu_data.gyroscope_covariance.y = gyro_variance[1];
+    _imu_data.gyroscope_covariance.z = gyro_variance[2];
+    _imu_data.magnetometer_covariance.x = mag_variance[0];
+    _imu_data.magnetometer_covariance.y = mag_variance[1];
+    _imu_data.magnetometer_covariance.z = mag_variance[2];
+    _history_index = 0;
+  }
+}
+
 void _cablicate()
 {
   uint8_t addr = ACCEL_XOUT_H | 0x80;
@@ -167,14 +243,29 @@ void _cablicate()
   {
     _select();
     HAL_SPI_Transmit(_hspi, &addr, 1, TIMEOUT_MS);
-    HAL_SPI_Receive(_hspi, _buffer, 12, TIMEOUT_MS);
+    HAL_SPI_Receive(_hspi, _buffer, IMU_READ_SIZE, TIMEOUT_MS);
     _unselect();
-    acc_accel[0] += _get_accel(_buffer[0], _buffer[1], 0);
-    acc_accel[1] += _get_accel(_buffer[2], _buffer[3], 1);
-    acc_accel[2] += _get_accel(_buffer[4], _buffer[5], 2);
-    acc_gyro[0] += _get_gyro(_buffer[6], _buffer[7], 0);
-    acc_gyro[1] += _get_gyro(_buffer[8], _buffer[9], 1);
-    acc_gyro[2] += _get_gyro(_buffer[10], _buffer[11], 2);
+    float accel[3] = {0};
+    float gyro[3] = {0};
+    float mag[3] = {0};
+    accel[0] = _get_accel(_buffer[0], _buffer[1], 0);
+    accel[1] = _get_accel(_buffer[2], _buffer[3], 1);
+    accel[2] = _get_accel(_buffer[4], _buffer[5], 2);
+    gyro[0] = _get_gyro(_buffer[6], _buffer[7], 0);
+    gyro[1] = _get_gyro(_buffer[8], _buffer[9], 1);
+    gyro[2] = _get_gyro(_buffer[10], _buffer[11], 2);
+    mag[0] = _get_mag(_buffer[16], _buffer[15], 0);
+    mag[1] = _get_mag(_buffer[18], _buffer[17], 1);
+    mag[2] = _get_mag(_buffer[20], _buffer[19], 2);
+    acc_accel[0] += accel[0];
+    acc_accel[1] += accel[1];
+    acc_accel[2] += accel[2];
+    acc_gyro[0] += gyro[0];
+    acc_gyro[1] += gyro[1];
+    acc_gyro[2] += gyro[2];
+    _covariance_matrix(accel[0], accel[1], accel[2], 
+      gyro[0], gyro[1], gyro[2], 
+      mag[0], mag[1], mag[2]);
     HAL_Delay(10);
   }
   _accel_offset[0] = acc_accel[0] / CABLICATE_COUNT;
@@ -269,6 +360,9 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef * hspi)
     _imu_data.magnetometer.x = _get_mag(_buffer[16], _buffer[15], 0);
     _imu_data.magnetometer.y = _get_mag(_buffer[18], _buffer[17], 1);
     _imu_data.magnetometer.z = _get_mag(_buffer[20], _buffer[19], 2);
+    _covariance_matrix(_imu_data.accelerometer.x, _imu_data.accelerometer.y, _imu_data.accelerometer.z,
+      _imu_data.gyroscope.x, _imu_data.gyroscope.y, _imu_data.gyroscope.z,
+      _imu_data.magnetometer.x, _imu_data.magnetometer.y, _imu_data.magnetometer.z);
 
     _current_step++;
     _imu_step_process();
