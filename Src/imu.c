@@ -8,7 +8,7 @@
 #include <math.h>
 #include <stdint.h>
 
-#define CABLICATE_COUNT 100
+#define CABLICATE_COUNT 500
 #define IMU_READ_SIZE 23
 
 const uint8_t _gyro_precision = GYRO_500_DPS;
@@ -256,8 +256,8 @@ void _cablicate()
     acc_gyro[0] += gyro[0];
     acc_gyro[1] += gyro[1];
     acc_gyro[2] += gyro[2];
-    _covariance_matrix(accel[0], accel[1], accel[2], 
-      gyro[0], gyro[1], gyro[2], 
+    _covariance_matrix(accel[0], accel[1], accel[2],
+      gyro[0], gyro[1], gyro[2],
       mag[0], mag[1], mag[2]);
     HAL_Delay(10);
   }
@@ -357,10 +357,7 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef * hspi)
     _imu_data.magnetometer.x = _get_mag(_buffer[16], _buffer[15], 0);
     _imu_data.magnetometer.y = _get_mag(_buffer[18], _buffer[17], 1);
     _imu_data.magnetometer.z = _get_mag(_buffer[20], _buffer[19], 2);
-    _covariance_matrix(_imu_data.accelerometer.x, _imu_data.accelerometer.y, _imu_data.accelerometer.z,
-      _imu_data.gyroscope.x, _imu_data.gyroscope.y, _imu_data.gyroscope.z,
-      _imu_data.magnetometer.x, _imu_data.magnetometer.y, _imu_data.magnetometer.z);
-
+    
     _current_step++;
     _imu_step_process();
   }
