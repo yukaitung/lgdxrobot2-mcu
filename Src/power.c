@@ -43,7 +43,6 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 void POWER_Init(ADC_HandleTypeDef *hadc)
 {
   _hadc = hadc;
-  POWER_Read_Start();
 }
 
 void POWER_Read_Start()

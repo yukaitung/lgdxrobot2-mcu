@@ -121,8 +121,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	{
 		MOTOR_PID();
     Handling_Mcu_Data();
-    IMU_Read_Start();
-    //POWER_Read_Start();
+    IMU_Read_Start(); // This read power to pevent conflict
 	}
 }
 

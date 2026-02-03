@@ -4,6 +4,7 @@
 
 #include "imu.h"
 #include "flash.h"
+#include "power.h"
 #include <math.h>
 #include <stdint.h>
 
@@ -16,6 +17,7 @@ const uint8_t _accel_precision = ACCEL_2G;
 enum __imu_steps {
   get_accel_gyro_addr = 0,
   get_accel_gyro_read,
+  read_power,
   done
 };
 int _current_step = done;
@@ -322,6 +324,10 @@ void _imu_step_process()
     case get_accel_gyro_read:
       HAL_SPI_Receive_IT(_hspi, _buffer, IMU_READ_SIZE);
       break;
+    case read_power:
+      POWER_Read_Start();
+      _current_step++;
+      break;
     case done:
       break;
   }
@@ -404,8 +410,6 @@ void IMU_Init(SPI_HandleTypeDef *hspi)
   _cablicate();
 
   _select_bank(0);
-
-  IMU_Read_Start();
 }
 
 void IMU_Read_Start()
