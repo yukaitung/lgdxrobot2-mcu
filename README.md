@@ -17,13 +17,6 @@ LGDXRobot2 MCU is an STM32-based controller board designed specifically for the 
 * [Documentation](https://docs.lgdxrobot.bristolgram.uk/lgdxrobot2/)
 * Issue boards on both GitLab and GitHub
 
-### LGDXRobot2 All Repositories
-
-* Design files for both the chassis body and the controller board: ([GitLab](https://gitlab.com/lgdxrobotics/lgdxrobot2-design) | [GitHub](https://github.com/yukaitung/lgdxrobot2-design))
-* Firmware for the controller board: ([GitLab](https://gitlab.com/lgdxrobotics/lgdxrobot2-mcu) | [GitHub](https://github.com/yukaitung/lgdxrobot2-mcu))
-* A GUI tool for hardware testing: ([GitLab](https://gitlab.com/lgdxrobotics/lgdxrobot2-chassistuner) | [GitHub](https://github.com/yukaitung/lgdxrobot2-chassistuner))
-* LGDXRobot2 ROS 2 integration: ([GitLab](https://gitlab.com/lgdxrobotics/lgdxrobot2-ros2) | [GitHub](https://github.com/yukaitung/lgdxrobot2-ros2))
-
 ## Prerequisites
 
 * [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html)
