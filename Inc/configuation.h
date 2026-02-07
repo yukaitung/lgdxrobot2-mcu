@@ -21,8 +21,6 @@
 #define MOTOR_SPEED_RAMP 0.1f
 
 // Power Monitoring
-#define ENABLE_POWER_MONITORING
-#define POWER_MAXIMUM_CURRENT 15.0f // A
 #define POWER_MINIMUM_VOLTAGE 12.0f // V (Only for actuators battery)
 
 #endif

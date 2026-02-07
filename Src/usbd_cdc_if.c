@@ -24,6 +24,9 @@
 /* USER CODE BEGIN INCLUDE */
 #include "lgdxrobot2.h"
 #include "motor.h"
+#include "estop.h"
+#include "flash.h"
+#include "imu.h"
 #include "stm32f4xx_hal.h"
 #include "usbd_desc.h"
 
@@ -272,7 +275,14 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
       case MCU_SOFTWARE_EMERGENCY_STOP_COMMAND_TYPE:
         McuSoftwareEmergencyStopCommand cmd_e = {0};
         memcpy(&cmd_e, Buf, sizeof(McuSoftwareEmergencyStopCommand));
-        MOTOR_Set_Emergency_Stop(software_emergency_stop, cmd_e.enable);
+        if (cmd_e.enable)
+        {
+          ESTOP_Enable(software_emergency_stop);
+        }
+        else
+        {
+          ESTOP_Disable(software_emergency_stop);
+        }
         break;
       case MCU_INVERSE_KINEMATICS_COMMAND_TYPE:
         McuInverseKinematicsCommand cmd_i = {0};
@@ -317,8 +327,8 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
         memcpy(&cmd_q, Buf, sizeof(McuSetPidCommand));
         MOTOR_Set_Temporary_Pid(cmd_q.motor, cmd_q.level, cmd_q.p, cmd_q.i, cmd_q.d);
         break;
-      case MCU_SAVE_PID_COMMAND_TYPE:
-        MOTOR_Save_Pid();
+      case MCU_SAVE_CONFIGURATION_COMMAND_TYPE:
+        Flash_Save();
         break;
       case MCU_SET_MOTOR_MAXIMUM_SPEED_COMMAND_TYPE:
         McuSetMotorMaximumSpeedCommand cmd_u = {0};
@@ -337,6 +347,29 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
         serial_number.serial_number2 = HAL_GetUIDw1();
         serial_number.serial_number3 = HAL_GetUIDw2();
         CDC_Transmit_FS((uint8_t*) &serial_number, sizeof(McuSerialNumber));
+        break;
+      case MCU_SET_MAG_CALIBRATION_DATA_COMMAND_TYPE:
+        McuSetMagCalibrationDataCommand cmd_w = {0};
+        memcpy(&cmd_w, Buf, sizeof(McuSetMagCalibrationDataCommand));
+        IMU_Set_Mag_Calibration_Data(&cmd_w);
+        break;
+      case MCU_GET_MAG_CALIBRATION_DATA_COMMAND_TYPE:
+        McuMagCalibrationData mag_calibration_data = {0};
+        mag_calibration_data.header1 = MCU_HEADER1;
+        mag_calibration_data.header2 = MCU_HEADER2;
+        mag_calibration_data.header3 = MCU_HEADER3;
+        mag_calibration_data.header4 = MCU_HEADER4;
+        mag_calibration_data.type = MCU_MAG_CALIBRATION_DATA_TYPE;
+        for(int i = 0; i < 3; i++)
+        {
+          mag_calibration_data.hard_iron_max[i] = IMU_Get_Hard_Iron_Max(i);
+          mag_calibration_data.hard_iron_min[i] = IMU_Get_Hard_Iron_Min(i);
+        }
+        for(int i = 0; i < 9; i++)
+        {
+          mag_calibration_data.soft_iron_matrix[i] = IMU_Get_Soft_Iron_Matrix(i);
+        }
+        CDC_Transmit_FS((uint8_t*) &mag_calibration_data, sizeof(McuMagCalibrationData));
         break;
       case MCU_RESET_TRANSFORM_COMMAND_TYPE:
         MOTOR_Reset_Transform();

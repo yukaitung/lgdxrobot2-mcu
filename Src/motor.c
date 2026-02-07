@@ -1,13 +1,11 @@
 #include <math.h>
-#include <stdbool.h>
 #include <stdlib.h>
-#include <string.h>
+#include <stdbool.h>
 
 #include "configuation.h"
 #include "main.h"
-#include "stm32f4xx_hal_flash.h"
-#include "stm32f4xx_hal_flash_ex.h"
 #include "motor.h"
+#include "flash.h"
 
 // Constant from motor.h
 PID_SPEED
@@ -23,7 +21,6 @@ uint32_t pid_elapsed = 0;
 uint32_t pid_last_tick = 0;
 float pid_accumulate_error[API_MOTOR_COUNT] = {0, 0, 0, 0};
 float pid_last_error[API_MOTOR_COUNT] = {0, 0, 0, 0};
-float pid_d_fileter[API_MOTOR_COUNT] = {0, 0, 0, 0};
 int pid_output[API_MOTOR_COUNT] = {0, 0, 0, 0};
 
 float transform[3] = {0, 0, 0};
@@ -37,27 +34,8 @@ float motors_desire_velocity[API_MOTOR_COUNT] = {0, 0, 0, 0}; // For slow down g
 uint16_t encoder_value[API_MOTOR_COUNT] = {0, 0, 0, 0};
 uint16_t encoder_last_value[API_MOTOR_COUNT] = {0, 0, 0, 0};
 
-bool emergency_stops_enabled[emergency_stops_count] = {false, false, false};
-
 TIM_HandleTypeDef *pwm_htim;
 TIM_HandleTypeDef *encoders_htim[API_MOTOR_COUNT];
-
-uint32_t flash_start_address = 0x08040000U;
-
-typedef struct {
-	float p;
-	float i;
-	float d;
-} _pid;
-
-#pragma pack(push, 1)
-typedef struct {
-	uint8_t modified;
-	_pid pid[PID_LEVEL][API_MOTOR_COUNT];
-	float pid_speed[PID_LEVEL];
-	float motors_maximum_speed[API_MOTOR_COUNT];
-} _pid_save;
-#pragma pack(pop)
 
 /*
  * Private Functions
@@ -76,32 +54,6 @@ int _safe_unsigned_subtract(int a, int b, int limit)
 	return a - b;
 }
 
-void _set_led(bool green)
-{
-	if (green)
-	{
-		HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(D2_GPIO_Port, D2_Pin, GPIO_PIN_RESET);
-	}
-	else
-	{
-		HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(D2_GPIO_Port, D2_Pin, GPIO_PIN_SET);
-	}
-}
-
-void _reset_led()
-{
-	for(int i = 0; i < emergency_stops_count; i++)
-	{
-		if(emergency_stops_enabled[i])
-			return;
-	}
-	HAL_GPIO_WritePin(DRxSTBY_GPIO_Port, DRxSTBY_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(D1_GPIO_Port, D1_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(D2_GPIO_Port, D2_Pin, GPIO_PIN_RESET);
-}
-
 void _set_ccr(int motor, int ccr)
 {
 	if(ccr > pwm_counter_max)
@@ -111,13 +63,13 @@ void _set_ccr(int motor, int ccr)
 	switch(motor)
 	{
 		case 0:
-			TIM2->CCR1 = ccr;
+			TIM2->CCR4 = ccr;
 			break;
 		case 1:
 			TIM2->CCR2 = ccr;
 			break;
 		case 2:
-			TIM2->CCR4 = ccr;
+			TIM2->CCR1 = ccr;
 			break;
 		case 3:
 			TIM2->CCR3 = ccr;
@@ -193,7 +145,6 @@ void _handle_user_velocity(int motor, float target_velocity)
 		motors_last_velocity[motor] = 0;
 		motors_target_velocity[motor] = 0;
 		pid_accumulate_error[motor] = 0;
-		pid_d_fileter[motor] = 0;
 		pid_last_error[motor] = 0;
 		pid_output[motor] = 0;
 		return;
@@ -221,35 +172,9 @@ void _handle_user_velocity(int motor, float target_velocity)
  * Public Functions
  */
 
-void _read_pid_from_flash()
+void MOTOR_Init(TIM_HandleTypeDef *pwm_htim1, TIM_HandleTypeDef *e1_htim, TIM_HandleTypeDef *e2_htim, TIM_HandleTypeDef *e3_htim, TIM_HandleTypeDef *e4_htim)
 {
-	_pid_save pid_save = {0};
-	uint8_t *flash = (uint8_t*)(uintptr_t)flash_start_address;
-	memcpy(&pid_save, flash, sizeof(_pid_save));
-	if (pid_save.modified == MCU_HEADER1)
-	{
-		for(int level = 0; level < PID_LEVEL; level++)
-		{
-			for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
-			{
-				motors_Kp[level][motor] = pid_save.pid[level][motor].p;
-				motors_Ki[level][motor] = pid_save.pid[level][motor].i;
-				motors_Kd[level][motor] = pid_save.pid[level][motor].d;
-			}
-			pid_speed[level] = pid_save.pid_speed[level];
-		}
-		for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
-		{
-			motor_max_speed[motor] = pid_save.motors_maximum_speed[motor];
-		}
-	}
-}
-
-void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *e1_htim, TIM_HandleTypeDef *e2_htim, TIM_HandleTypeDef *e3_htim, TIM_HandleTypeDef *e4_htim)
-{
-	_read_pid_from_flash();
-
-	pwm_htim = pwm_htim;
+	pwm_htim = pwm_htim1;
 	encoders_htim[0] = e1_htim;
 	encoders_htim[1] = e2_htim;
 	encoders_htim[2] = e3_htim;
@@ -267,11 +192,28 @@ void MOTOR_Init(TIM_HandleTypeDef *pwm_htim, TIM_HandleTypeDef *e1_htim, TIM_Han
 		HAL_TIM_Encoder_Start(encoders_htim[i], TIM_CHANNEL_ALL);
 	}
 
+	flash_data data = Flash_Get();
+	if (data.modified == FLASH_DATA_MODIFIED) // If the data is not modified, use the default value
+	{
+		for(int level = 0; level < PID_LEVEL; level++)
+		{
+			for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
+			{
+				motors_Kp[level][motor] = data.pid[level][motor].p;
+				motors_Ki[level][motor] = data.pid[level][motor].i;
+				motors_Kd[level][motor] = data.pid[level][motor].d;
+			}
+			pid_speed[level] = data.pid_speed[level];
+		}
+		for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
+		{
+			motor_max_speed[motor] = data.motors_maximum_speed[motor];
+		}
+	}
+	
 	pid_last_tick = HAL_GetTick();
 	
 	HAL_GPIO_WritePin(RS1_GPIO_Port, RS1_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(DRxSTBY_GPIO_Port, DRxSTBY_Pin, GPIO_PIN_SET);
-	_set_led(true);
 }
 
 uint32_t MOTOR_Get_Pid_Elapsed()
@@ -347,14 +289,6 @@ float MOTOR_Get_Pid(int motor, int level, int k)
 	return 0;
 }
 
-bool MOTOR_Get_Emergency_Stop_Status(int type)
-{
-	if (type < 0 || type > emergency_stops_count)
-		return false;
-
-	return emergency_stops_enabled[type];
-}
-
 void MOTOR_Set_Ik(float velocity_x, float velocity_y, float velocity_w)
 {
 	motors_target_velocity[0] = (1 / WHEEL_RADIUS) * (velocity_x - velocity_y - (CHASSIS_LX + CHASSIS_LY) * velocity_w);
@@ -401,52 +335,6 @@ void MOTOR_Set_Temporary_Maximum_Speed(float speed1, float speed2, float speed3,
 	motor_max_speed[1] = speed2;
 	motor_max_speed[2] = speed3;
 	motor_max_speed[3] = speed4;
-}
-
-void MOTOR_Save_Pid()
-{
-	_pid_save pid_save = {0};
-	pid_save.modified = MCU_HEADER1;
-	for(int level = 0; level < PID_LEVEL; level++)
-	{
-		for(int motor = 0; motor < API_MOTOR_COUNT; motor++)
-		{
-			pid_save.pid[level][motor].p = motors_Kp[level][motor];
-			pid_save.pid[level][motor].i = motors_Ki[level][motor];
-			pid_save.pid[level][motor].d = motors_Kd[level][motor];
-		}
-		pid_save.pid_speed[level] = pid_speed[level];
-	}
-	for (int motor = 0; motor < API_MOTOR_COUNT; motor++)
-	{
-		pid_save.motors_maximum_speed[motor] = motor_max_speed[motor];
-	}
-	uint8_t* data = (uint8_t*) &pid_save;
-	HAL_FLASH_Unlock();
-	FLASH_Erase_Sector(6, FLASH_VOLTAGE_RANGE_3);
-	for(int i = 0; i < sizeof(_pid_save); i++)
-	{
-		HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, flash_start_address + i, data[i]);
-	}
-	HAL_FLASH_Lock();
-}
-
-void MOTOR_Set_Emergency_Stop(int type, bool enable)
-{
-	if (type < 0 || type > emergency_stops_count)
-		return;
-	
-	if (enable)
-	{
-		HAL_GPIO_WritePin(DRxSTBY_GPIO_Port, DRxSTBY_Pin, GPIO_PIN_RESET);
-		_set_led(false);
-		emergency_stops_enabled[type] = true;
-	}
-	else
-	{
-		emergency_stops_enabled[type] = false;
-		_reset_led();
-	}
 }
 
 void MOTOR_Reset_Transform()
@@ -514,34 +402,31 @@ void MOTOR_PID()
 		encoder_value[i] = __HAL_TIM_GET_COUNTER(encoders_htim[i]);
 		motors_actual_velocity[i] = (_safe_unsigned_subtract(encoder_value[i], encoder_last_value[i], encoder_counter_max) / (ENCODER_PPR * dt)) * (2 * M_PI);
 
-		// Discard anomaly in encoder
+			// Discard anomaly in encoder
 		if(motors_actual_velocity[i] > motor_max_speed[i] || motors_actual_velocity[i] < -motor_max_speed[i])
 			motors_actual_velocity[i] = motors_last_velocity[i];
 
 		// 2. Calculate PID
-		// Get PID from speed
+			// Get PID from speed
 		_pid pid = _get_pid_from_speed(i, motors_desire_velocity[i]);
 
-		// Calaculate error and P
+			// Calaculate error and P
 		float error = fabs(motors_desire_velocity[i]) - fabs(motors_actual_velocity[i]);
 		float pid_p = pid.p * error;
 
-		// Calcuater I using trapezoidal rule
+			// Calcuater I using trapezoidal rule
 		float pid_trapezoidal = 0.5 * (error + pid_last_error[i]) * dt;
 		pid_accumulate_error[i] += pid_trapezoidal;
 		float pid_i = pid.i * pid_accumulate_error[i];
 
-		// Calculate D
-		float derivative = (error - pid_last_error[i]) / dt;
-		float tau = 0.04f; // filter time constant (seconds) 
-		float alpha = dt / (tau + dt);
-		pid_d_fileter[i] += alpha * (derivative - pid_d_fileter[i]);
-		float pid_d = -pid.d * pid_d_fileter[i];
+			// Calculate D
+		float pid_d = pid.d * ((error - pid_last_error[i]) / dt);
 
+			// Calculate output
 		pid_output[i] = roundf(((pid_p + pid_i + pid_d) / motor_max_speed[i]) * pwm_counter_max);
 		pid_output[i] = motors_desire_velocity[i] != 0 ? abs(pid_output[i]) : 0;
 
-		// Discard overshooting error
+			// Discard overshooting error
 		if (pid_output[i] > pwm_counter_max)
 		{
 			pid_output[i] = pwm_counter_max;
@@ -559,15 +444,14 @@ void MOTOR_PID()
 			}
 		}
 
-		// Discard error at 0
+			// Discard error at 0
 		if (pid_output[i] == 0)
 		{
 			pid_accumulate_error[i] = 0;
-			pid_d_fileter[i] = 0;
 		}
 
 		// 3. Update State
-		// For speed down
+			// For speed down
 		if (motors_desire_velocity[i] != 0 && motors_desire_velocity[i] > fabs(motors_target_velocity[i]))
 		{
 			motors_desire_velocity[i] -= MOTOR_SPEED_RAMP;
