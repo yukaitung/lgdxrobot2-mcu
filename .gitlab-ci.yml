@@ -36,15 +36,15 @@ build:
   image: ubuntu:24.04
   before_script:
     - apt update
-    - apt install -y --no-install-recommends cmake ninja-build gcc-arm-none-eabi libnewlib-arm-none-eabi
+    - apt install -y --no-install-recommends cmake ninja-build gcc-arm-none-eabi libnewlib-arm-none-eabi curl
   script:
     - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=./cmake/gcc-arm-none-eabi.cmake -S ./ -B ./build/Release -G Ninja
     - cmake --build ./build/Release
-    - mv ./build/Release/LGDXRobot2.elf ./LGDXRobot2.elf
-  artifacts:
-    paths:
-      - LGDXRobot2.elf
-    expire_in: 1 day
+    - cd ./build/Release
+    - |
+      curl --location --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+           --upload-file LGDXRobot2.elf \
+           "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/${APP_VERSION}/LGDXRobot2.elf"
 
 #
 # Release
@@ -62,21 +62,15 @@ release:
       artifacts: true
     - job: build
       artifacts: true
-  before_script:
+  script:
     - apk add glab
     - apk add gitlab-release-cli  
-    - apk add curl
-  script:
-    - |
-      curl --location --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
-           --upload-file LGDXRobot2.elf \
-           "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/${APP_VERSION}/LGDXRobot2.elf"
   release:
-    name : 'Release $APP_VERSION'
+    name : '$APP_VERSION'
     tag_name: '$APP_VERSION'
     description: '$APP_VERSION'
     ref: '$CI_COMMIT_SHA'
     assets:
       links:
-        - name: 'Download LGDXRobot2.elf'
+        - name: 'LGDXRobot2 MCU Firmware'
           url: '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/${APP_VERSION}/LGDXRobot2.elf'
