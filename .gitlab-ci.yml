@@ -38,13 +38,26 @@ build:
     - apt update
     - apt install -y --no-install-recommends cmake ninja-build gcc-arm-none-eabi libnewlib-arm-none-eabi curl ca-certificates
   script:
+    # Build Configuration 1
     - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=./cmake/gcc-arm-none-eabi.cmake -S ./ -B ./build/Release -G Ninja
     - cmake --build ./build/Release
+    - mv ./build/Release/LGDXRobot2.elf ./build/Release/LGDXRobot2_conf1.elf
+    # Build Configuration 2
+    - rm ./Inc/configuation.h
+    - mv ./Inc/configuation2.h ./Inc/configuation.h
+    - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=./cmake/gcc-arm-none-eabi.cmake -S ./ -B ./build/Release -G Ninja
+    - cmake --build ./build/Release
+    - mv ./build/Release/LGDXRobot2.elf ./build/Release/LGDXRobot2_conf2.elf
+    # Release
     - cd ./build/Release
     - |
       curl --location --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
-           --upload-file LGDXRobot2.elf \
-           "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/${APP_VERSION}/LGDXRobot2.elf"
+           --upload-file LGDXRobot2_conf1.elf \
+           "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/${APP_VERSION}/LGDXRobot2_conf1.elf"
+    - |
+      curl --location --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+           --upload-file LGDXRobot2_conf2.elf \
+           "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/${APP_VERSION}/LGDXRobot2_conf2.elf"
 
 #
 # Release
@@ -72,5 +85,7 @@ release:
     ref: '$CI_COMMIT_SHA'
     assets:
       links:
-        - name: 'LGDXRobot2 MCU Firmware'
-          url: '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/${APP_VERSION}/LGDXRobot2.elf'
+        - name: 'LGDXRobot2 MCU Firmware, Wheel Radius = 75mm, Wheel Width = 32mm'
+          url: '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/${APP_VERSION}/LGDXRobot2_conf1.elf'
+        - name: 'LGDXRobot2 MCU Firmware, Wheel Radius = 80mm, Wheel Width = 37mm'
+          url: '${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/LGDXRobot2-MCU/${APP_VERSION}/LGDXRobot2_conf2.elf'

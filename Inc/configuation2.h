@@ -1,4 +1,4 @@
-// Wheel Radius: 75mm, Wheel Width: 32mm, Coupler Extension Lengh: 16mm
+// Wheel Radius: 80mm, Wheel Width: 37mm, Coupler Extension Lengh: 15.75mm
 
 #ifndef __CONFIGURATION_H
 #define __CONFIGURATION_H
@@ -6,9 +6,9 @@
 #include "lgdxrobot2.h"
 
 // Chassis Configuration
-#define CHASSIS_LX 0.082f
+#define CHASSIS_LX 0.098f
 #define CHASSIS_LY 0.104f
-#define WHEEL_RADIUS 0.0375f
+#define WHEEL_RADIUS 0.04f
 
 // Motor Configuration
 #define ENCODER_PPR 3960
