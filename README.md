@@ -13,8 +13,8 @@ LGDXRobot2 MCU is an STM32-based controller board designed specifically for the 
 
 ### Getting Help
 
-* [Homepage](https://bristolgram.uk/lgdxrobot2/)
-* [Documentation](https://bristolgram.uk/lgdxrobot2/docs/)
+* [Homepage](https://lgdxrobot.uk/lgdxrobot2/)
+* [Documentation](https://lgdxrobot.uk/lgdxrobot2/docs/)
 * Issue boards on both GitLab and GitHub
 
 ## Prerequisites
